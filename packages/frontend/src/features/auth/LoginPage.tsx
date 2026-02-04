@@ -17,6 +17,7 @@ export default function LoginPage() {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password }),
       })
 
@@ -27,8 +28,8 @@ export default function LoginPage() {
         return
       }
 
-      // Token'ı localStorage'a kaydet (Phase 2'de daha iyi bir çözüm gelecek)
-      localStorage.setItem('token', data.accessToken)
+      // accessToken bellekte tutulur, refreshToken httpOnly cookie'de
+      console.log('Giriş başarılı:', data.user)
       // TODO: Dashboard'a yönlendir
     } catch {
       setError('Sunucuya bağlanılamadı')
