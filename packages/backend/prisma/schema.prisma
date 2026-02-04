@@ -1,0 +1,134 @@
+// Prisma Schema — TaskFlow veri modeli
+// Bu dosya veritabanı tablolarını tanımlar.
+// `prisma migrate dev` ile migration oluşturulur.
+// `prisma generate` ile TypeScript client güncellenir.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── User ────────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projects ProjectMember[]
+  tasks    Task[]          @relation("assignee")
+  comments Comment[]
+}
+
+// ── Project ─────────────────────────────────────────────
+
+model Project {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members ProjectMember[]
+  tasks   Task[]
+  labels  Label[]
+}
+
+model ProjectMember {
+  id       String   @id @default(cuid())
+  role     Role     @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([userId, projectId])
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+// ── Task ────────────────────────────────────────────────
+
+model Task {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  status      Status    @default(TODO)
+  priority    Priority  @default(MEDIUM)
+  position    Int       @default(0)
+  dueDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String
+  assignee   User?       @relation("assignee", fields: [assigneeId], references: [id])
+  assigneeId String?
+  labels     TaskLabel[]
+  comments   Comment[]
+}
+
+enum Status {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ── Label ───────────────────────────────────────────────
+
+model Label {
+  id        String      @id @default(cuid())
+  name      String
+  color     String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  tasks     TaskLabel[]
+
+  @@unique([name, projectId])
+}
+
+model TaskLabel {
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId  String
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  labelId String
+
+  @@id([taskId, labelId])
+}
+
+// ── Comment ─────────────────────────────────────────────
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  taskId   String
+  author   User   @relation(fields: [authorId], references: [id])
+  authorId String
+}
