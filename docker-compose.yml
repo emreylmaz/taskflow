@@ -1,8 +1,9 @@
 # Docker Compose — TaskFlow Development Environment
-# Kullanım: docker compose up -d
+# Kullanım:
+#   1. cp .env.docker .env.docker.local (oluştur)
+#   2. docker compose up -d
 
 services:
-  # PostgreSQL veritabanı
   postgres:
     image: postgres:16-alpine
     container_name: taskflow-db
@@ -11,7 +12,7 @@ services:
       - "5432:5432"
     environment:
       POSTGRES_USER: taskflow
-      POSTGRES_PASSWORD: taskflow_dev_2024
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       POSTGRES_DB: taskflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
