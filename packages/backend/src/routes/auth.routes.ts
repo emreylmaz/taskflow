@@ -80,10 +80,10 @@ router.post(
         throw ApiError.unauthorized('Refresh token bulunamadı')
       }
 
-      const tokens = await authService.refresh(refreshToken)
+      const result = await authService.refresh(refreshToken)
 
-      res.cookie('refreshToken', tokens.refreshToken, getRefreshCookieOptions())
-      res.json({ accessToken: tokens.accessToken })
+      res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions())
+      res.json({ accessToken: result.accessToken, user: result.user })
     } catch (err) {
       next(err)
     }
@@ -91,9 +91,17 @@ router.post(
 )
 
 // POST /api/auth/logout
-router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('refreshToken', getRefreshCookieOptions())
-  res.json({ message: 'Çıkış yapıldı' })
+router.post('/logout', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken
+    if (refreshToken) {
+      await authService.logout(refreshToken)
+    }
+    res.clearCookie('refreshToken', getRefreshCookieOptions())
+    res.json({ message: 'Çıkış yapıldı' })
+  } catch (err) {
+    next(err)
+  }
 })
 
 export default router

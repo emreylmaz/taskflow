@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'
 import rateLimit from 'express-rate-limit'
 import authRoutes from './routes/auth.routes.js'
 import { errorHandler } from './middleware/errorHandler.js'
+import { requestLogger } from './middleware/requestLogger.js'
 import { env } from './config/env.js'
 
 const app = express()
@@ -19,6 +20,11 @@ app.use(cors({
 // ── Body Parsing ───────────────────────────────────────
 app.use(express.json({ limit: '10kb' }))
 app.use(cookieParser())
+
+// ── Request Logging ────────────────────────────────────
+if (env.NODE_ENV !== 'test') {
+  app.use(requestLogger)
+}
 
 // ── Rate Limiting (test ortamında devre dışı) ──────────
 if (env.NODE_ENV !== 'test') {

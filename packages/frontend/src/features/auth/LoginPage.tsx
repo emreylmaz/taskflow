@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { Link } from 'react-router'
+import { Link, useNavigate, useLocation } from 'react-router'
 import { LogIn } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -8,31 +9,28 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const { login, isAuthenticated } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Zaten giriş yapmışsa dashboard'a yönlendir
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
+
+  if (isAuthenticated) {
+    navigate(from, { replace: true })
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, password }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.message || 'Giriş başarısız')
-        return
-      }
-
-      // accessToken bellekte tutulur, refreshToken httpOnly cookie'de
-      console.log('Giriş başarılı:', data.user)
-      // TODO: Dashboard'a yönlendir
-    } catch {
-      setError('Sunucuya bağlanılamadı')
+      await login(email, password)
+      navigate(from, { replace: true })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Giriş başarısız'
+      setError(message)
     } finally {
       setLoading(false)
     }

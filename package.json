@@ -11,11 +11,25 @@
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "test": "turbo run test",
-    "format": "prettier --write \"**/*.{ts,tsx,json,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,json,md}\"",
+    "prepare": "husky"
   },
   "devDependencies": {
-    "turbo": "^2.5.0",
-    "prettier": "^3.5.0"
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.5.0",
+    "turbo": "^2.5.0"
+  },
+  "lint-staged": {
+    "packages/backend/**/*.ts": [
+      "prettier --write"
+    ],
+    "packages/frontend/**/*.{ts,tsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
   },
   "packageManager": "npm@10.9.2"
 }
