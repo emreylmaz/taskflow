@@ -92,7 +92,7 @@ router.post(
 
 // POST /api/auth/logout
 router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('refreshToken', { path: '/api/auth' })
+  res.clearCookie('refreshToken', getRefreshCookieOptions())
   res.json({ message: 'Çıkış yapıldı' })
 })
 

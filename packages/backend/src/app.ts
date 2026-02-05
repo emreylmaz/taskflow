@@ -12,7 +12,7 @@ const app = express()
 // ── Security Middleware ────────────────────────────────
 app.use(helmet())                          // Security headers
 app.use(cors({
-  origin: env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: env.CORS_ORIGIN,
   credentials: true,
 }))
 
@@ -39,8 +39,8 @@ if (env.NODE_ENV !== 'test') {
   })
 
   app.use(globalLimiter)
-  app.use('/api/auth/login', authLimiter)
-  app.use('/api/auth/register', authLimiter)
+  app.post('/api/auth/login', authLimiter)
+  app.post('/api/auth/register', authLimiter)
 }
 
 // ── Health Check ───────────────────────────────────────
