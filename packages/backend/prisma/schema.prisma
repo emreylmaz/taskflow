@@ -48,6 +48,7 @@ model RefreshToken {
   @@index([userId])
   @@index([family])
   @@index([token])
+  @@index([expiresAt])
 }
 
 // ── Project ─────────────────────────────────────────────

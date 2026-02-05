@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto, { createHash } from "crypto";
 import { prisma } from "../config/database.js";
 import { hashPassword, comparePassword } from "../utils/hash.js";
 import { generateAccessToken } from "../utils/jwt.js";
@@ -19,6 +19,14 @@ interface LoginInput {
 const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
+ * Token'ı SHA-256 ile hash'ler
+ * DB'de sadece hash saklanır, plain token kullanıcıya gönderilir
+ */
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+/**
  * Yeni bir token family ID oluşturur
  * Family, aynı oturumdan gelen token'ları gruplar
  */
@@ -36,24 +44,26 @@ function generateOpaqueToken(): string {
 
 /**
  * DB'ye yeni refresh token kaydeder
+ * Plain token kullanıcıya döner, DB'ye hash'lenmiş hali kaydedilir
  */
 async function createRefreshToken(
   userId: string,
   family: string,
 ): Promise<string> {
-  const token = generateOpaqueToken();
+  const plainToken = generateOpaqueToken();
+  const hashedToken = hashToken(plainToken);
   const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_MS);
 
   await prisma.refreshToken.create({
     data: {
-      token,
+      token: hashedToken,
       userId,
       family,
       expiresAt,
     },
   });
 
-  return token;
+  return plainToken;
 }
 
 /**
@@ -69,10 +79,12 @@ async function revokeTokenFamily(family: string): Promise<void> {
 
 /**
  * Belirli bir token'ı iptal eder
+ * Gelen plain token hash'lenerek DB'de aranır
  */
-async function revokeToken(token: string): Promise<void> {
+async function revokeToken(plainToken: string): Promise<void> {
+  const hashedToken = hashToken(plainToken);
   await prisma.refreshToken.updateMany({
-    where: { token, revokedAt: null },
+    where: { token: hashedToken, revokedAt: null },
     data: { revokedAt: new Date() },
   });
 }
@@ -159,9 +171,10 @@ export async function login(input: LoginInput) {
 }
 
 export async function refresh(refreshTokenValue: string) {
-  // Token'ı DB'de bul
+  // Gelen plain token'ı hash'le ve DB'de ara
+  const hashedToken = hashToken(refreshTokenValue);
   const storedToken = await prisma.refreshToken.findUnique({
-    where: { token: refreshTokenValue },
+    where: { token: hashedToken },
     include: {
       user: {
         select: {
@@ -218,8 +231,10 @@ export async function refresh(refreshTokenValue: string) {
 export async function logout(refreshTokenValue: string) {
   if (!refreshTokenValue) return;
 
+  // Gelen plain token'ı hash'le ve DB'de ara
+  const hashedToken = hashToken(refreshTokenValue);
   const storedToken = await prisma.refreshToken.findUnique({
-    where: { token: refreshTokenValue },
+    where: { token: hashedToken },
   });
 
   if (storedToken) {
