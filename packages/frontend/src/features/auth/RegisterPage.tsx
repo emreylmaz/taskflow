@@ -1,15 +1,22 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { UserPlus } from 'lucide-react'
+import { useAuth } from '../../contexts/AuthContext'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const { register, isAuthenticated } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Zaten giriş yapmışsa dashboard'a yönlendir
+  if (isAuthenticated) {
+    navigate('/dashboard', { replace: true })
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -28,24 +35,11 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ name, email, password }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.message || 'Kayıt başarısız')
-        return
-      }
-
-      // Başarılı kayıt → login sayfasına yönlendir
-      navigate('/login')
-    } catch {
-      setError('Sunucuya bağlanılamadı')
+      await register(name, email, password)
+      navigate('/dashboard', { replace: true })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Kayıt başarısız'
+      setError(message)
     } finally {
       setLoading(false)
     }

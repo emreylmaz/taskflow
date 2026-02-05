@@ -80,10 +80,10 @@ router.post(
         throw ApiError.unauthorized('Refresh token bulunamadı')
       }
 
-      const tokens = await authService.refresh(refreshToken)
+      const result = await authService.refresh(refreshToken)
 
-      res.cookie('refreshToken', tokens.refreshToken, getRefreshCookieOptions())
-      res.json({ accessToken: tokens.accessToken })
+      res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions())
+      res.json({ accessToken: result.accessToken, user: result.user })
     } catch (err) {
       next(err)
     }

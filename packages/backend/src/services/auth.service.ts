@@ -89,6 +89,11 @@ export async function refresh(refreshTokenValue: string) {
     // Kullanıcının hâlâ var olduğunu kontrol et
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+      },
     })
 
     if (!user) {
@@ -100,7 +105,7 @@ export async function refresh(refreshTokenValue: string) {
     const accessToken = generateAccessToken(tokenPayload)
     const newRefreshToken = generateRefreshToken(tokenPayload)
 
-    return { accessToken, refreshToken: newRefreshToken }
+    return { accessToken, refreshToken: newRefreshToken, user }
   } catch {
     throw ApiError.unauthorized('Geçersiz refresh token')
   }
