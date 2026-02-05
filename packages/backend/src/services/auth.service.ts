@@ -3,20 +3,14 @@ import { prisma } from "../config/database.js";
 import { hashPassword, comparePassword } from "../utils/hash.js";
 import { generateAccessToken } from "../utils/jwt.js";
 import { ApiError } from "../utils/ApiError.js";
-
-interface RegisterInput {
-  name: string;
-  email: string;
-  password: string;
-}
-
-interface LoginInput {
-  email: string;
-  password: string;
-}
+import type { RegisterInput, LoginInput } from "@taskflow/shared";
 
 // Refresh token süresi (7 gün)
 const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Account lockout settings
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 dakika
 
 /**
  * Token'ı SHA-256 ile hash'ler
@@ -99,6 +93,48 @@ async function revokeAllUserTokens(userId: string): Promise<void> {
   });
 }
 
+/**
+ * Hesap kilitli mi kontrol eder
+ */
+function isAccountLocked(lockoutUntil: Date | null): boolean {
+  if (!lockoutUntil) return false;
+  return lockoutUntil > new Date();
+}
+
+/**
+ * Başarısız login denemesini kaydet ve gerekirse hesabı kilitle
+ */
+async function recordFailedLogin(
+  userId: string,
+  currentAttempts: number,
+): Promise<void> {
+  const newAttempts = currentAttempts + 1;
+  const shouldLock = newAttempts >= MAX_FAILED_ATTEMPTS;
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      failedLoginAttempts: newAttempts,
+      lockoutUntil: shouldLock
+        ? new Date(Date.now() + LOCKOUT_DURATION_MS)
+        : null,
+    },
+  });
+}
+
+/**
+ * Başarılı login sonrası sayaçları sıfırla
+ */
+async function resetLoginAttempts(userId: string): Promise<void> {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      failedLoginAttempts: 0,
+      lockoutUntil: null,
+    },
+  });
+}
+
 export async function register(input: RegisterInput) {
   const normalizedEmail = input.email.toLowerCase().trim();
 
@@ -144,12 +180,26 @@ export async function login(input: LoginInput) {
     throw ApiError.unauthorized("E-posta veya şifre hatalı");
   }
 
+  // Account lockout kontrolü
+  if (isAccountLocked(user.lockoutUntil)) {
+    const remainingMs = user.lockoutUntil!.getTime() - Date.now();
+    const remainingMin = Math.ceil(remainingMs / 60000);
+    throw ApiError.tooManyRequests(
+      `Hesabınız kilitli. ${remainingMin} dakika sonra tekrar deneyin.`,
+    );
+  }
+
   // Şifre kontrolü
   const isValid = await comparePassword(input.password, user.password);
 
   if (!isValid) {
+    // Başarısız denemeyi kaydet
+    await recordFailedLogin(user.id, user.failedLoginAttempts);
     throw ApiError.unauthorized("E-posta veya şifre hatalı");
   }
+
+  // Başarılı login - sayaçları sıfırla
+  await resetLoginAttempts(user.id);
 
   // Token'ları oluştur
   const payload = { userId: user.id, email: user.email };
