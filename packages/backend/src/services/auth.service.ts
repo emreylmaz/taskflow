@@ -15,9 +15,11 @@ interface LoginInput {
 }
 
 export async function register(input: RegisterInput) {
+  const normalizedEmail = input.email.toLowerCase().trim()
+
   // E-posta kontrolü
   const existing = await prisma.user.findUnique({
-    where: { email: input.email },
+    where: { email: normalizedEmail },
   })
 
   if (existing) {
@@ -31,7 +33,7 @@ export async function register(input: RegisterInput) {
   const user = await prisma.user.create({
     data: {
       name: input.name,
-      email: input.email,
+      email: normalizedEmail,
       password: hashedPassword,
     },
     select: {
@@ -46,9 +48,11 @@ export async function register(input: RegisterInput) {
 }
 
 export async function login(input: LoginInput) {
+  const normalizedEmail = input.email.toLowerCase().trim()
+
   // Kullanıcıyı bul
   const user = await prisma.user.findUnique({
-    where: { email: input.email },
+    where: { email: normalizedEmail },
   })
 
   if (!user) {
