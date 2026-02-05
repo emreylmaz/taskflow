@@ -1,30 +1,29 @@
-import crypto from 'crypto'
-import { prisma } from '../config/database.js'
-import { hashPassword, comparePassword } from '../utils/hash.js'
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.js'
-import { ApiError } from '../utils/ApiError.js'
-import { env } from '../config/env.js'
+import crypto from "crypto";
+import { prisma } from "../config/database.js";
+import { hashPassword, comparePassword } from "../utils/hash.js";
+import { generateAccessToken } from "../utils/jwt.js";
+import { ApiError } from "../utils/ApiError.js";
 
 interface RegisterInput {
-  name: string
-  email: string
-  password: string
+  name: string;
+  email: string;
+  password: string;
 }
 
 interface LoginInput {
-  email: string
-  password: string
+  email: string;
+  password: string;
 }
 
 // Refresh token süresi (7 gün)
-const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000
+const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
 
 /**
  * Yeni bir token family ID oluşturur
  * Family, aynı oturumdan gelen token'ları gruplar
  */
 function generateTokenFamily(): string {
-  return crypto.randomUUID()
+  return crypto.randomUUID();
 }
 
 /**
@@ -32,15 +31,18 @@ function generateTokenFamily(): string {
  * DB'de saklanacak, daha güvenli
  */
 function generateOpaqueToken(): string {
-  return crypto.randomBytes(32).toString('hex')
+  return crypto.randomBytes(32).toString("hex");
 }
 
 /**
  * DB'ye yeni refresh token kaydeder
  */
-async function createRefreshToken(userId: string, family: string): Promise<string> {
-  const token = generateOpaqueToken()
-  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_MS)
+async function createRefreshToken(
+  userId: string,
+  family: string,
+): Promise<string> {
+  const token = generateOpaqueToken();
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_MS);
 
   await prisma.refreshToken.create({
     data: {
@@ -49,9 +51,9 @@ async function createRefreshToken(userId: string, family: string): Promise<strin
       family,
       expiresAt,
     },
-  })
+  });
 
-  return token
+  return token;
 }
 
 /**
@@ -62,7 +64,7 @@ async function revokeTokenFamily(family: string): Promise<void> {
   await prisma.refreshToken.updateMany({
     where: { family, revokedAt: null },
     data: { revokedAt: new Date() },
-  })
+  });
 }
 
 /**
@@ -72,7 +74,7 @@ async function revokeToken(token: string): Promise<void> {
   await prisma.refreshToken.updateMany({
     where: { token, revokedAt: null },
     data: { revokedAt: new Date() },
-  })
+  });
 }
 
 /**
@@ -82,23 +84,23 @@ async function revokeAllUserTokens(userId: string): Promise<void> {
   await prisma.refreshToken.updateMany({
     where: { userId, revokedAt: null },
     data: { revokedAt: new Date() },
-  })
+  });
 }
 
 export async function register(input: RegisterInput) {
-  const normalizedEmail = input.email.toLowerCase().trim()
+  const normalizedEmail = input.email.toLowerCase().trim();
 
   // E-posta kontrolü
   const existing = await prisma.user.findUnique({
     where: { email: normalizedEmail },
-  })
+  });
 
   if (existing) {
-    throw ApiError.conflict('Bu e-posta adresi zaten kayıtlı')
+    throw ApiError.conflict("Bu e-posta adresi zaten kayıtlı");
   }
 
   // Şifreyi hashle
-  const hashedPassword = await hashPassword(input.password)
+  const hashedPassword = await hashPassword(input.password);
 
   // Kullanıcı oluştur
   const user = await prisma.user.create({
@@ -113,37 +115,37 @@ export async function register(input: RegisterInput) {
       email: true,
       createdAt: true,
     },
-  })
+  });
 
-  return user
+  return user;
 }
 
 export async function login(input: LoginInput) {
-  const normalizedEmail = input.email.toLowerCase().trim()
+  const normalizedEmail = input.email.toLowerCase().trim();
 
   // Kullanıcıyı bul
   const user = await prisma.user.findUnique({
     where: { email: normalizedEmail },
-  })
+  });
 
   if (!user) {
-    throw ApiError.unauthorized('E-posta veya şifre hatalı')
+    throw ApiError.unauthorized("E-posta veya şifre hatalı");
   }
 
   // Şifre kontrolü
-  const isValid = await comparePassword(input.password, user.password)
+  const isValid = await comparePassword(input.password, user.password);
 
   if (!isValid) {
-    throw ApiError.unauthorized('E-posta veya şifre hatalı')
+    throw ApiError.unauthorized("E-posta veya şifre hatalı");
   }
 
   // Token'ları oluştur
-  const payload = { userId: user.id, email: user.email }
-  const accessToken = generateAccessToken(payload)
-  
+  const payload = { userId: user.id, email: user.email };
+  const accessToken = generateAccessToken(payload);
+
   // Yeni bir token family başlat
-  const family = generateTokenFamily()
-  const refreshToken = await createRefreshToken(user.id, family)
+  const family = generateTokenFamily();
+  const refreshToken = await createRefreshToken(user.id, family);
 
   return {
     accessToken,
@@ -153,7 +155,7 @@ export async function login(input: LoginInput) {
       name: user.name,
       email: user.email,
     },
-  }
+  };
 }
 
 export async function refresh(refreshTokenValue: string) {
@@ -169,57 +171,65 @@ export async function refresh(refreshTokenValue: string) {
         },
       },
     },
-  })
+  });
 
   // Token bulunamadı
   if (!storedToken) {
-    throw ApiError.unauthorized('Geçersiz refresh token')
+    throw ApiError.unauthorized("Geçersiz refresh token");
   }
 
   // Token daha önce kullanılmış (revoked)
   // Bu bir token reuse saldırısı olabilir!
   if (storedToken.revokedAt) {
     // Tüm family'yi iptal et (güvenlik önlemi)
-    await revokeTokenFamily(storedToken.family)
-    throw ApiError.unauthorized('Token daha önce kullanılmış, tüm oturumlar sonlandırıldı')
+    await revokeTokenFamily(storedToken.family);
+    throw ApiError.unauthorized(
+      "Token daha önce kullanılmış, tüm oturumlar sonlandırıldı",
+    );
   }
 
   // Token süresi dolmuş
   if (storedToken.expiresAt < new Date()) {
-    await revokeToken(refreshTokenValue)
-    throw ApiError.unauthorized('Refresh token süresi dolmuş')
+    await revokeToken(refreshTokenValue);
+    throw ApiError.unauthorized("Refresh token süresi dolmuş");
   }
 
   // Eski token'ı iptal et (rotation)
-  await revokeToken(refreshTokenValue)
+  await revokeToken(refreshTokenValue);
 
   // Yeni token'lar oluştur (aynı family'de)
-  const tokenPayload = { userId: storedToken.user.id, email: storedToken.user.email }
-  const accessToken = generateAccessToken(tokenPayload)
-  const newRefreshToken = await createRefreshToken(storedToken.user.id, storedToken.family)
+  const tokenPayload = {
+    userId: storedToken.user.id,
+    email: storedToken.user.email,
+  };
+  const accessToken = generateAccessToken(tokenPayload);
+  const newRefreshToken = await createRefreshToken(
+    storedToken.user.id,
+    storedToken.family,
+  );
 
   return {
     accessToken,
     refreshToken: newRefreshToken,
     user: storedToken.user,
-  }
+  };
 }
 
 export async function logout(refreshTokenValue: string) {
-  if (!refreshTokenValue) return
+  if (!refreshTokenValue) return;
 
   const storedToken = await prisma.refreshToken.findUnique({
     where: { token: refreshTokenValue },
-  })
+  });
 
   if (storedToken) {
     // Token'ın family'sini iptal et (bu cihazdan yapılan tüm oturumlar)
-    await revokeTokenFamily(storedToken.family)
+    await revokeTokenFamily(storedToken.family);
   }
 }
 
 export async function logoutAll(userId: string) {
-  await revokeAllUserTokens(userId)
+  await revokeAllUserTokens(userId);
 }
 
 // Eski süresi dolmuş token'ları temizle (cron job için)
@@ -231,6 +241,6 @@ export async function cleanupExpiredTokens() {
         { revokedAt: { lt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) } }, // 30 gün önce revoke edilmiş
       ],
     },
-  })
-  return result.count
+  });
+  return result.count;
 }

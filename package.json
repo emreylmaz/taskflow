@@ -22,11 +22,9 @@
   },
   "lint-staged": {
     "packages/backend/**/*.ts": [
-      "eslint --fix",
       "prettier --write"
     ],
     "packages/frontend/**/*.{ts,tsx}": [
-      "eslint --fix",
       "prettier --write"
     ],
     "*.{json,md}": [

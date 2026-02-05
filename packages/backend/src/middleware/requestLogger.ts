@@ -1,6 +1,6 @@
-import pinoHttp from 'pino-http'
-import { logger } from '../utils/logger.js'
-import type { Request, Response } from 'express'
+import pinoHttp from "pino-http";
+import { logger } from "../utils/logger.js";
+import type { Request, Response } from "express";
 
 /**
  * HTTP Request Logger Middleware
@@ -11,8 +11,10 @@ export const requestLogger = pinoHttp({
 
   // Request'e özgü bilgileri ekle
   customProps: (req: Request) => ({
-    // Authenticated user varsa ekle
-    ...(req.user && { userId: (req.user as { userId?: string }).userId }),
+    // Authenticated user varsa ekle (auth middleware tarafından eklenir)
+    ...((req as Request & { user?: { userId?: string } }).user && {
+      userId: (req as Request & { user?: { userId?: string } }).user?.userId,
+    }),
   }),
 
   // Hangi field'lar loglanacak
@@ -22,8 +24,8 @@ export const requestLogger = pinoHttp({
       url: req.url,
       // Headers'dan hassas bilgileri çıkar
       headers: {
-        'user-agent': req.headers['user-agent'],
-        'content-type': req.headers['content-type'],
+        "user-agent": req.headers["user-agent"],
+        "content-type": req.headers["content-type"],
       },
     }),
     res: (res) => ({
@@ -33,24 +35,24 @@ export const requestLogger = pinoHttp({
 
   // Custom log message
   customSuccessMessage: (req: Request, res: Response) => {
-    return `${req.method} ${req.url} ${res.statusCode}`
+    return `${req.method} ${req.url} ${res.statusCode}`;
   },
 
   customErrorMessage: (req: Request, res: Response) => {
-    return `${req.method} ${req.url} ${res.statusCode}`
+    return `${req.method} ${req.url} ${res.statusCode}`;
   },
 
   // Response time threshold for slow requests (500ms)
   customLogLevel: (_req: Request, res: Response, err?: Error) => {
-    if (err || res.statusCode >= 500) return 'error'
-    if (res.statusCode >= 400) return 'warn'
-    return 'info'
+    if (err || res.statusCode >= 500) return "error";
+    if (res.statusCode >= 400) return "warn";
+    return "info";
   },
 
   // Health check endpoint'lerini loglama
   autoLogging: {
     ignore: (req: Request) => {
-      return req.url === '/api/health' || req.url === '/health'
+      return req.url === "/api/health" || req.url === "/health";
     },
   },
-})
+});
