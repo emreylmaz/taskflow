@@ -91,9 +91,17 @@ router.post(
 )
 
 // POST /api/auth/logout
-router.post('/logout', (_req: Request, res: Response) => {
-  res.clearCookie('refreshToken', getRefreshCookieOptions())
-  res.json({ message: 'Çıkış yapıldı' })
+router.post('/logout', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken
+    if (refreshToken) {
+      await authService.logout(refreshToken)
+    }
+    res.clearCookie('refreshToken', getRefreshCookieOptions())
+    res.json({ message: 'Çıkış yapıldı' })
+  } catch (err) {
+    next(err)
+  }
 })
 
 export default router
