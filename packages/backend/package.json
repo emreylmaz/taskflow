@@ -17,8 +17,10 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@taskflow/shared": "*",
     "@prisma/client": "^6.9.0",
     "bcrypt": "^6.0.0",
+    "compression": "^1.8.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "express": "^5.1.0",
@@ -32,6 +34,7 @@
   "devDependencies": {
     "@eslint/js": "^9.25.0",
     "@types/bcrypt": "^5.0.2",
+    "@types/compression": "^1.7.5",
     "@types/cookie-parser": "^1.4.10",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
