@@ -60,10 +60,15 @@ model Project {
   name        String
   description String?
   color       String   @default("#6366f1")
+  
+  // Modül ayarları (flow_control, subtasks, time_tracking, etc.)
+  modules     Json     @default("{}")
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   members ProjectMember[]
+  lists   List[]
   tasks   Task[]
   labels  Label[]
 }
@@ -87,32 +92,63 @@ enum Role {
   MEMBER
 }
 
+// ── List ────────────────────────────────────────────────
+
+model List {
+  id        String   @id @default(cuid())
+  name      String
+  position  Int      @default(0)
+  color     String?
+  
+  // Flow control (modules.flow_control aktifse kullanılır)
+  requiredRoleToEnter  Role[]  @default([])  // boş = herkes girebilir
+  requiredRoleToLeave  Role[]  @default([])  // boş = herkes çıkarabilir
+  
+  // Archive flag - Archive listesi özel davranır
+  isArchive Boolean  @default(false)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  tasks     Task[]
+
+  @@index([projectId])
+}
+
 // ── Task ────────────────────────────────────────────────
 
 model Task {
   id          String    @id @default(cuid())
   title       String
   description String?
-  status      Status    @default(TODO)
   priority    Priority  @default(MEDIUM)
   position    Int       @default(0)
   dueDate     DateTime?
+  
+  // AI/Automation metadata (JSON field for extensibility)
+  metadata    Json      @default("{}")
+  
+  // Soft delete - null ise aktif, date ise arşivlenmiş
+  archivedAt  DateTime?
+  
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  // Relations
+  list       List      @relation(fields: [listId], references: [id], onDelete: Cascade)
+  listId     String
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId  String
-  assignee   User?       @relation("assignee", fields: [assigneeId], references: [id])
+  assignee   User?     @relation("assignee", fields: [assigneeId], references: [id])
   assigneeId String?
   labels     TaskLabel[]
   comments   Comment[]
-}
 
-enum Status {
-  TODO
-  IN_PROGRESS
-  REVIEW
-  DONE
+  @@index([listId])
+  @@index([projectId])
+  @@index([archivedAt])
 }
 
 enum Priority {
