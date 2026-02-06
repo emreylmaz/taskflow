@@ -271,6 +271,7 @@ export async function deleteList(listId: string): Promise<void> {
 
 /**
  * Listeleri yeniden sırala
+ * Batch update ile N+1 query problemini önler
  */
 export async function reorderLists(
   projectId: string,
@@ -289,15 +290,19 @@ export async function reorderLists(
     throw ApiError.badRequest("Geçersiz liste ID'leri");
   }
 
-  // Toplu güncelleme
-  await prisma.$transaction(
-    listIds.map((id, index) =>
-      prisma.list.update({
-        where: { id },
-        data: { position: index },
-      }),
-    ),
-  );
+  // Batch update: CASE-WHEN ile tek sorguda tüm pozisyonları güncelle
+  if (listIds.length === 0) return;
+
+  const caseStatements = listIds
+    .map((id, index) => `WHEN id = '${id}' THEN ${index}`)
+    .join(" ");
+
+  await prisma.$executeRawUnsafe(`
+    UPDATE "List"
+    SET position = CASE ${caseStatements} END,
+        "updatedAt" = NOW()
+    WHERE id IN (${listIds.map((id) => `'${id}'`).join(", ")})
+  `);
 }
 
 /**

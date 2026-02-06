@@ -414,6 +414,7 @@ export async function moveTask(
 
 /**
  * Liste içinde task'ları yeniden sırala
+ * Batch update ile N+1 query problemini önler
  */
 export async function reorderTasks(
   listId: string,
@@ -432,15 +433,20 @@ export async function reorderTasks(
     throw ApiError.badRequest("Geçersiz görev ID'leri");
   }
 
-  // Toplu güncelleme
-  await prisma.$transaction(
-    taskIds.map((id, index) =>
-      prisma.task.update({
-        where: { id },
-        data: { position: index },
-      }),
-    ),
-  );
+  // Batch update: CASE-WHEN ile tek sorguda tüm pozisyonları güncelle
+  // Bu, N ayrı UPDATE yerine tek bir UPDATE query çalıştırır
+  if (taskIds.length === 0) return;
+
+  const caseStatements = taskIds
+    .map((id, index) => `WHEN id = '${id}' THEN ${index}`)
+    .join(" ");
+
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Task"
+    SET position = CASE ${caseStatements} END,
+        "updatedAt" = NOW()
+    WHERE id IN (${taskIds.map((id) => `'${id}'`).join(", ")})
+  `);
 }
 
 /**
