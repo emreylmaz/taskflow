@@ -115,6 +115,10 @@ export const reorderTasksSchema = z.object({
   taskIds: z.array(z.string()).min(1, 'En az bir görev ID\'si gerekli'),
 })
 
+export const restoreTaskSchema = z.object({
+  listId: z.string().min(1, 'Liste ID\'si gerekli').optional(),
+})
+
 // ── Label Schemas ───────────────────────────────────────
 
 export const createLabelSchema = z.object({
@@ -178,6 +182,7 @@ export type CreateTaskInput = z.infer<typeof createTaskSchema>
 export type UpdateTaskInput = z.infer<typeof updateTaskSchema>
 export type MoveTaskInput = z.infer<typeof moveTaskSchema>
 export type ReorderTasksInput = z.infer<typeof reorderTasksSchema>
+export type RestoreTaskInput = z.infer<typeof restoreTaskSchema>
 
 export type CreateLabelInput = z.infer<typeof createLabelSchema>
 export type UpdateLabelInput = z.infer<typeof updateLabelSchema>

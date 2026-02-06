@@ -10,6 +10,7 @@ import {
   updateTaskSchema,
   moveTaskSchema,
   reorderTasksSchema,
+  restoreTaskSchema,
 } from "@taskflow/shared";
 import { validate } from "../middleware/validate.js";
 import { authenticate } from "../middleware/auth.js";
@@ -162,6 +163,7 @@ taskRouter.delete(
 taskRouter.post(
   "/:id/restore",
   requireTaskAccess(),
+  validate(restoreTaskSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const targetListId = req.body.listId;
