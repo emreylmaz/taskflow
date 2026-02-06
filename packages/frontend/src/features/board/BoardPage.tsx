@@ -3,8 +3,9 @@
  * Ana Board sayfası
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParams } from "react-router";
+import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
   SortableContext,
@@ -25,11 +26,14 @@ export default function BoardPage() {
     lists,
     isLoading,
     error,
+    setLists,
     createList,
     createTask,
     updateTask,
     deleteTask,
     moveTask,
+    reorderLists,
+    reorderTasks,
   } = useBoard(projectId);
 
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(
@@ -38,30 +42,91 @@ export default function BoardPage() {
 
   const listIds = useMemo(() => lists.map((l) => l.id), [lists]);
 
-  // Handlers for DnD
-  const handleReorderLists = (newLists: ListWithTasks[]) => {
-    // Optimistically update lists order in parent state
-    // In real implementation, useBoard should expose a setState-like or specific reorder action
-    // But useBoard currently only exposes basic CRUD.
-    // We need to implement reorderLists in useBoard properly.
-    // For now, let's assume updateList updates the local state fully or re-fetch.
-    // But re-fetch is slow. Ideally useBoard should have setLists exposed or reorderLists action.
-    // Let's just log for now as placeholder for Phase 4A completion.
-    console.log("Reorder lists:", newLists);
-  };
+  // Handlers for DnD with error handling
+  const handleReorderLists = useCallback(
+    async (newLists: ListWithTasks[]) => {
+      const previousLists = lists;
+      try {
+        // Optimistic update
+        setLists(newLists);
+        // API call
+        await reorderLists(newLists.map((l) => l.id));
+      } catch (err) {
+        // Rollback on error
+        setLists(previousLists);
+        toast.error("Listeler yeniden sıralanamadı");
+      }
+    },
+    [lists, setLists, reorderLists],
+  );
 
-  const handleReorderTasks = (listId: string, newTasks: TaskWithDetails[]) => {
-    console.log("Reorder tasks in list:", listId, newTasks);
-  };
+  const handleReorderTasks = useCallback(
+    async (listId: string, newTasks: TaskWithDetails[]) => {
+      const previousLists = lists;
+      try {
+        // Optimistic update
+        setLists((prev) =>
+          prev.map((list) =>
+            list.id === listId ? { ...list, tasks: newTasks } : list,
+          ),
+        );
+        // API call
+        await reorderTasks(
+          listId,
+          newTasks.map((t) => t.id),
+        );
+      } catch (err) {
+        // Rollback on error
+        setLists(previousLists);
+        toast.error("Görevler yeniden sıralanamadı");
+      }
+    },
+    [lists, setLists, reorderTasks],
+  );
 
-  const handleMoveTask = (
-    taskId: string,
-    _fromListId: string,
-    toListId: string,
-    newIndex: number,
-  ) => {
-    moveTask(taskId, { listId: toListId, position: newIndex });
-  };
+  const handleMoveTask = useCallback(
+    async (
+      taskId: string,
+      fromListId: string,
+      toListId: string,
+      newIndex: number,
+    ) => {
+      const previousLists = lists;
+      try {
+        // Optimistic update: Move task between lists
+        setLists((prev) => {
+          const fromList = prev.find((l) => l.id === fromListId);
+          const toList = prev.find((l) => l.id === toListId);
+          if (!fromList || !toList) return prev;
+
+          const task = fromList.tasks.find((t) => t.id === taskId);
+          if (!task) return prev;
+
+          return prev.map((list) => {
+            if (list.id === fromListId) {
+              return {
+                ...list,
+                tasks: list.tasks.filter((t) => t.id !== taskId),
+              };
+            }
+            if (list.id === toListId) {
+              const newTasks = [...list.tasks];
+              newTasks.splice(newIndex, 0, { ...task, listId: toListId });
+              return { ...list, tasks: newTasks };
+            }
+            return list;
+          });
+        });
+        // API call
+        await moveTask(taskId, { listId: toListId, position: newIndex });
+      } catch (err) {
+        // Rollback on error
+        setLists(previousLists);
+        toast.error("Görev taşınamadı");
+      }
+    },
+    [lists, setLists, moveTask],
+  );
 
   if (isLoading) {
     return (

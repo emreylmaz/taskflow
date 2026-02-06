@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router";
+import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -15,6 +16,7 @@ function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <Toaster position="top-right" richColors />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
             {/* Public Routes */}

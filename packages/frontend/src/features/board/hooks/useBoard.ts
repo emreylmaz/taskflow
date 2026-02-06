@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
+import { toast } from "sonner";
 import { api } from "../../../lib/api";
 import type {
   ProjectWithRole,
@@ -22,12 +23,15 @@ interface UseBoardReturn {
   isLoading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+  setLists: React.Dispatch<React.SetStateAction<ListWithTasks[]>>;
   createList: (data: CreateListRequest) => Promise<void>;
   updateList: (listId: string, data: UpdateListRequest) => Promise<void>;
   deleteList: (listId: string) => Promise<void>;
+  reorderLists: (listIds: string[]) => Promise<void>;
   createTask: (listId: string, data: CreateTaskRequest) => Promise<void>;
   updateTask: (taskId: string, data: UpdateTaskRequest) => Promise<void>;
   moveTask: (taskId: string, data: MoveTaskRequest) => Promise<void>;
+  reorderTasks: (listId: string, taskIds: string[]) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
 }
 
@@ -91,6 +95,14 @@ export function useBoard(projectId: string | undefined): UseBoardReturn {
     await api.delete(`/lists/${listId}`);
   }, []);
 
+  const reorderLists = useCallback(
+    async (listIds: string[]) => {
+      if (!projectId) return;
+      await api.patch(`/projects/${projectId}/lists/reorder`, { listIds });
+    },
+    [projectId],
+  );
+
   const createTask = useCallback(
     async (listId: string, data: CreateTaskRequest) => {
       const newTask = await api.post<TaskWithDetails>(
@@ -144,6 +156,13 @@ export function useBoard(projectId: string | undefined): UseBoardReturn {
     [fetchBoardData],
   );
 
+  const reorderTasks = useCallback(
+    async (listId: string, taskIds: string[]) => {
+      await api.patch(`/lists/${listId}/tasks/reorder`, { taskIds });
+    },
+    [],
+  );
+
   const deleteTask = useCallback(async (taskId: string) => {
     setLists((prev) =>
       prev.map((list) => ({
@@ -160,12 +179,15 @@ export function useBoard(projectId: string | undefined): UseBoardReturn {
     isLoading,
     error,
     refetch: fetchBoardData,
+    setLists,
     createList,
     updateList,
     deleteList,
+    reorderLists,
     createTask,
     updateTask,
     moveTask,
+    reorderTasks,
     deleteTask,
   };
 }
