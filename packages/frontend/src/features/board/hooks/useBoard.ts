@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
 import { api } from "../../../lib/api";
 import type {
   ProjectWithRole,
