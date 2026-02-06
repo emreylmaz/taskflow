@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "cd ../.. && npm install --legacy-peer-deps",
+  "installCommand": "npm cache clean --force && cd ../.. && npm install --legacy-peer-deps",
   "buildCommand": "cd ../.. && npm run build -- --filter=@taskflow/frontend",
   "outputDirectory": "dist",
   "framework": "vite",
