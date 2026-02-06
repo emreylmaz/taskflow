@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router";
+import { Toaster } from "sonner";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -8,25 +9,44 @@ import { LoadingFallback } from "./components/LoadingFallback";
 // Code splitting with React.lazy
 const LoginPage = lazy(() => import("./features/auth/LoginPage"));
 const RegisterPage = lazy(() => import("./features/auth/RegisterPage"));
-const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
+const ProjectsPage = lazy(() => import("./features/projects/ProjectsPage"));
+const BoardPage = lazy(() => import("./features/board/BoardPage"));
 
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
+        <Toaster position="top-right" richColors />
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected Routes */}
             <Route
-              path="/dashboard"
+              path="/projects"
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <ProjectsPage />
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/projects/:projectId"
+              element={
+                <ProtectedRoute>
+                  <BoardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Redirects */}
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/projects" replace />}
+            />
+            <Route path="/" element={<Navigate to="/projects" replace />} />
           </Routes>
         </Suspense>
       </AuthProvider>
