@@ -8,7 +8,8 @@ import { LoadingFallback } from "./components/LoadingFallback";
 // Code splitting with React.lazy
 const LoginPage = lazy(() => import("./features/auth/LoginPage"));
 const RegisterPage = lazy(() => import("./features/auth/RegisterPage"));
-const DashboardPage = lazy(() => import("./features/dashboard/DashboardPage"));
+const ProjectsPage = lazy(() => import("./features/projects/ProjectsPage"));
+const BoardPage = lazy(() => import("./features/board/BoardPage"));
 
 function App() {
   return (
@@ -16,17 +17,34 @@ function App() {
       <AuthProvider>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
+            {/* Public Routes */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+
+            {/* Protected Routes */}
             <Route
-              path="/dashboard"
+              path="/projects"
               element={
                 <ProtectedRoute>
-                  <DashboardPage />
+                  <ProjectsPage />
                 </ProtectedRoute>
               }
             />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route
+              path="/projects/:projectId"
+              element={
+                <ProtectedRoute>
+                  <BoardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Redirects */}
+            <Route
+              path="/dashboard"
+              element={<Navigate to="/projects" replace />}
+            />
+            <Route path="/" element={<Navigate to="/projects" replace />} />
           </Routes>
         </Suspense>
       </AuthProvider>
