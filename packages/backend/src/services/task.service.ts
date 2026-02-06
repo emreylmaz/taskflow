@@ -14,39 +14,45 @@ import type {
   Priority,
 } from "@taskflow/shared";
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Prisma Include Configuration & Response Mapper
+// ═══════════════════════════════════════════════════════════════════════════════
+
 /**
- * Task'ı detaylı olarak getir
+ * Standard include configuration for task queries
  */
-export async function getTaskById(taskId: string): Promise<TaskWithDetails> {
-  const task = await prisma.task.findUnique({
-    where: { id: taskId },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-        },
-      },
-      labels: {
-        include: {
-          label: true,
-        },
-      },
-      list: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
+export const taskIncludeConfig = {
+  assignee: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatar: true,
     },
-  });
+  },
+  labels: {
+    include: {
+      label: true,
+    },
+  },
+  list: {
+    select: {
+      id: true,
+      name: true,
+    },
+  },
+} as const;
 
-  if (!task) {
-    throw ApiError.notFound("Görev bulunamadı");
-  }
+// Type for task with includes
+type TaskWithIncludes = Prisma.TaskGetPayload<{
+  include: typeof taskIncludeConfig;
+}>;
 
+/**
+ * Convert Prisma Task entity to TaskWithDetails response type
+ * Centralizes response mapping to avoid DRY violations
+ */
+export function toTaskWithDetails(task: TaskWithIncludes): TaskWithDetails {
   return {
     id: task.id,
     title: task.title,
@@ -65,6 +71,26 @@ export async function getTaskById(taskId: string): Promise<TaskWithDetails> {
     labels: task.labels.map((tl) => tl.label),
     list: task.list,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Task Service Functions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Task'ı detaylı olarak getir
+ */
+export async function getTaskById(taskId: string): Promise<TaskWithDetails> {
+  const task = await prisma.task.findUnique({
+    where: { id: taskId },
+    include: taskIncludeConfig,
+  });
+
+  if (!task) {
+    throw ApiError.notFound("Görev bulunamadı");
+  }
+
+  return toTaskWithDetails(task);
 }
 
 /**
@@ -140,47 +166,10 @@ export async function createTask(
           }
         : undefined,
     },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-        },
-      },
-      labels: {
-        include: {
-          label: true,
-        },
-      },
-      list: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
+    include: taskIncludeConfig,
   });
 
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority as Priority,
-    position: task.position,
-    dueDate: task.dueDate,
-    metadata: task.metadata as Record<string, unknown>,
-    archivedAt: task.archivedAt,
-    listId: task.listId,
-    projectId: task.projectId,
-    assigneeId: task.assigneeId,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    assignee: task.assignee,
-    labels: task.labels.map((tl) => tl.label),
-    list: task.list,
-  };
+  return toTaskWithDetails(task);
 }
 
 /**
@@ -272,48 +261,11 @@ export async function updateTask(
         assigneeId: input.assigneeId,
         metadata: newMetadata as Prisma.InputJsonValue | undefined,
       },
-      include: {
-        assignee: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-          },
-        },
-        labels: {
-          include: {
-            label: true,
-          },
-        },
-        list: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
+      include: taskIncludeConfig,
     });
   });
 
-  return {
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    priority: task.priority as Priority,
-    position: task.position,
-    dueDate: task.dueDate,
-    metadata: task.metadata as Record<string, unknown>,
-    archivedAt: task.archivedAt,
-    listId: task.listId,
-    projectId: task.projectId,
-    assigneeId: task.assigneeId,
-    createdAt: task.createdAt,
-    updatedAt: task.updatedAt,
-    assignee: task.assignee,
-    labels: task.labels.map((tl) => tl.label),
-    list: task.list,
-  };
+  return toTaskWithDetails(task);
 }
 
 /**
@@ -369,47 +321,10 @@ export async function moveTask(
       position,
       archivedAt,
     },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-        },
-      },
-      labels: {
-        include: {
-          label: true,
-        },
-      },
-      list: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
+    include: taskIncludeConfig,
   });
 
-  return {
-    id: updatedTask.id,
-    title: updatedTask.title,
-    description: updatedTask.description,
-    priority: updatedTask.priority as Priority,
-    position: updatedTask.position,
-    dueDate: updatedTask.dueDate,
-    metadata: updatedTask.metadata as Record<string, unknown>,
-    archivedAt: updatedTask.archivedAt,
-    listId: updatedTask.listId,
-    projectId: updatedTask.projectId,
-    assigneeId: updatedTask.assigneeId,
-    createdAt: updatedTask.createdAt,
-    updatedAt: updatedTask.updatedAt,
-    assignee: updatedTask.assignee,
-    labels: updatedTask.labels.map((tl) => tl.label),
-    list: updatedTask.list,
-  };
+  return toTaskWithDetails(updatedTask);
 }
 
 /**
@@ -546,47 +461,10 @@ export async function restoreTask(
       listId,
       position,
     },
-    include: {
-      assignee: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          avatar: true,
-        },
-      },
-      labels: {
-        include: {
-          label: true,
-        },
-      },
-      list: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
+    include: taskIncludeConfig,
   });
 
-  return {
-    id: updatedTask.id,
-    title: updatedTask.title,
-    description: updatedTask.description,
-    priority: updatedTask.priority as Priority,
-    position: updatedTask.position,
-    dueDate: updatedTask.dueDate,
-    metadata: updatedTask.metadata as Record<string, unknown>,
-    archivedAt: updatedTask.archivedAt,
-    listId: updatedTask.listId,
-    projectId: updatedTask.projectId,
-    assigneeId: updatedTask.assigneeId,
-    createdAt: updatedTask.createdAt,
-    updatedAt: updatedTask.updatedAt,
-    assignee: updatedTask.assignee,
-    labels: updatedTask.labels.map((tl) => tl.label),
-    list: updatedTask.list,
-  };
+  return toTaskWithDetails(updatedTask);
 }
 
 /**

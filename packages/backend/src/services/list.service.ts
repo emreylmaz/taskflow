@@ -3,6 +3,7 @@
  * Liste CRUD işlemleri
  */
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database.js";
 import { ApiError } from "../utils/ApiError.js";
 import type {
@@ -11,7 +12,111 @@ import type {
   ListWithTasks,
   ListWithTaskCount,
   Role,
+  TaskWithDetails,
+  Priority,
 } from "@taskflow/shared";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Include Configurations & Response Mappers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Standard task include for list queries (without list relation to avoid circular)
+ */
+const taskInListInclude = {
+  assignee: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      avatar: true,
+    },
+  },
+  labels: {
+    include: {
+      label: true,
+    },
+  },
+} as const;
+
+// Type for task within list includes
+type TaskInListPayload = Prisma.TaskGetPayload<{
+  include: typeof taskInListInclude;
+}>;
+
+/**
+ * Convert Prisma Task (from list query) to TaskWithDetails-like response
+ * Omits 'list' field since it's already part of parent
+ */
+function toTaskInList(task: TaskInListPayload): Omit<TaskWithDetails, "list"> {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    priority: task.priority as Priority,
+    position: task.position,
+    dueDate: task.dueDate,
+    metadata: task.metadata as Record<string, unknown>,
+    archivedAt: task.archivedAt,
+    listId: task.listId,
+    projectId: task.projectId,
+    assigneeId: task.assigneeId,
+    createdAt: task.createdAt,
+    updatedAt: task.updatedAt,
+    assignee: task.assignee,
+    labels: task.labels.map((tl) => tl.label),
+  };
+}
+
+// Type for list with count
+type ListWithCountPayload = Prisma.ListGetPayload<{
+  include: { _count: { select: { tasks: true } } };
+}>;
+
+/**
+ * Convert Prisma List to ListWithTaskCount response
+ */
+export function toListWithCount(list: ListWithCountPayload): ListWithTaskCount {
+  return {
+    id: list.id,
+    name: list.name,
+    position: list.position,
+    color: list.color,
+    isArchive: list.isArchive,
+    requiredRoleToEnter: list.requiredRoleToEnter as Role[],
+    requiredRoleToLeave: list.requiredRoleToLeave as Role[],
+    projectId: list.projectId,
+    createdAt: list.createdAt,
+    updatedAt: list.updatedAt,
+    taskCount: list._count.tasks,
+  };
+}
+
+/**
+ * Convert Prisma List (without count) to ListWithTaskCount with taskCount = 0
+ */
+export function toListResponse(
+  list: Prisma.ListGetPayload<object>,
+  taskCount = 0,
+): ListWithTaskCount {
+  return {
+    id: list.id,
+    name: list.name,
+    position: list.position,
+    color: list.color,
+    isArchive: list.isArchive,
+    requiredRoleToEnter: list.requiredRoleToEnter as Role[],
+    requiredRoleToLeave: list.requiredRoleToLeave as Role[],
+    projectId: list.projectId,
+    createdAt: list.createdAt,
+    updatedAt: list.updatedAt,
+    taskCount,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// List Service Functions
+// ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Proje listelerini getir (task'larla birlikte)
@@ -32,21 +137,7 @@ export async function getProjectLists(
           archivedAt: null, // Sadece aktif task'lar
         },
         orderBy: { position: "asc" },
-        include: {
-          assignee: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              avatar: true,
-            },
-          },
-          labels: {
-            include: {
-              label: true,
-            },
-          },
-        },
+        include: taskInListInclude,
       },
     },
     orderBy: { position: "asc" },
@@ -63,30 +154,14 @@ export async function getProjectLists(
     projectId: list.projectId,
     createdAt: list.createdAt,
     updatedAt: list.updatedAt,
-    tasks: list.tasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      priority: task.priority,
-      position: task.position,
-      dueDate: task.dueDate,
-      metadata: task.metadata as Record<string, unknown>,
-      archivedAt: task.archivedAt,
-      listId: task.listId,
-      projectId: task.projectId,
-      assigneeId: task.assigneeId,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-      assignee: task.assignee,
-      labels: task.labels.map((tl) => tl.label),
-    })),
+    tasks: list.tasks.map(toTaskInList),
   }));
 }
 
 /**
  * Tek listeyi getir
  */
-export async function getListById(listId: string) {
+export async function getListById(listId: string): Promise<ListWithTaskCount> {
   const list = await prisma.list.findUnique({
     where: { id: listId },
     include: {
@@ -104,19 +179,7 @@ export async function getListById(listId: string) {
     throw ApiError.notFound("Liste bulunamadı");
   }
 
-  return {
-    id: list.id,
-    name: list.name,
-    position: list.position,
-    color: list.color,
-    isArchive: list.isArchive,
-    requiredRoleToEnter: list.requiredRoleToEnter as Role[],
-    requiredRoleToLeave: list.requiredRoleToLeave as Role[],
-    projectId: list.projectId,
-    createdAt: list.createdAt,
-    updatedAt: list.updatedAt,
-    taskCount: list._count.tasks,
-  } as ListWithTaskCount;
+  return toListWithCount(list);
 }
 
 /**
@@ -148,19 +211,7 @@ export async function createList(
     },
   });
 
-  return {
-    id: list.id,
-    name: list.name,
-    position: list.position,
-    color: list.color,
-    isArchive: list.isArchive,
-    requiredRoleToEnter: list.requiredRoleToEnter as Role[],
-    requiredRoleToLeave: list.requiredRoleToLeave as Role[],
-    projectId: list.projectId,
-    createdAt: list.createdAt,
-    updatedAt: list.updatedAt,
-    taskCount: 0,
-  };
+  return toListResponse(list, 0);
 }
 
 /**
@@ -204,19 +255,7 @@ export async function updateList(
     },
   });
 
-  return {
-    id: list.id,
-    name: list.name,
-    position: list.position,
-    color: list.color,
-    isArchive: list.isArchive,
-    requiredRoleToEnter: list.requiredRoleToEnter as Role[],
-    requiredRoleToLeave: list.requiredRoleToLeave as Role[],
-    projectId: list.projectId,
-    createdAt: list.createdAt,
-    updatedAt: list.updatedAt,
-    taskCount: list._count.tasks,
-  };
+  return toListWithCount(list);
 }
 
 /**
@@ -308,7 +347,9 @@ export async function reorderLists(
 /**
  * Archive listesini getir
  */
-export async function getArchiveList(projectId: string) {
+export async function getArchiveList(
+  projectId: string,
+): Promise<ListWithTasks> {
   const archiveList = await prisma.list.findFirst({
     where: {
       projectId,
@@ -320,21 +361,7 @@ export async function getArchiveList(projectId: string) {
           archivedAt: { not: null },
         },
         orderBy: { archivedAt: "desc" },
-        include: {
-          assignee: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              avatar: true,
-            },
-          },
-          labels: {
-            include: {
-              label: true,
-            },
-          },
-        },
+        include: taskInListInclude,
       },
     },
   });
@@ -354,22 +381,6 @@ export async function getArchiveList(projectId: string) {
     projectId: archiveList.projectId,
     createdAt: archiveList.createdAt,
     updatedAt: archiveList.updatedAt,
-    tasks: archiveList.tasks.map((task) => ({
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      priority: task.priority,
-      position: task.position,
-      dueDate: task.dueDate,
-      metadata: task.metadata as Record<string, unknown>,
-      archivedAt: task.archivedAt,
-      listId: task.listId,
-      projectId: task.projectId,
-      assigneeId: task.assigneeId,
-      createdAt: task.createdAt,
-      updatedAt: task.updatedAt,
-      assignee: task.assignee,
-      labels: task.labels.map((tl) => tl.label),
-    })),
+    tasks: archiveList.tasks.map(toTaskInList),
   };
 }
