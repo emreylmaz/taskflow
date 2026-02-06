@@ -149,6 +149,7 @@ model Task {
   @@index([listId])
   @@index([projectId])
   @@index([archivedAt])
+  @@index([assigneeId])
 }
 
 enum Priority {
