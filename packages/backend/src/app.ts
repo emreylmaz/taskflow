@@ -5,6 +5,9 @@ import cookieParser from "cookie-parser";
 import compression from "compression";
 import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes.js";
+import projectRoutes from "./routes/project.routes.js";
+import listRoutes, { listRouter } from "./routes/list.routes.js";
+import taskRoutes, { listTaskRouter } from "./routes/task.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { env } from "./config/env.js";
@@ -91,10 +94,32 @@ app.get("/api/health", (_req, res) => {
   res.redirect(301, "/api/v1/health");
 });
 
-// ── API v1 Routes ──────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+// API v1 Routes
+// ══════════════════════════════════════════════════════════════════════════════
+
+// Auth routes
 app.use("/api/v1/auth", authRoutes);
 
-// Legacy routes redirect (backward compatibility)
+// Project routes
+app.use("/api/v1/projects", projectRoutes);
+
+// Project-scoped list routes
+app.use("/api/v1/projects/:projectId/lists", listRoutes);
+
+// Standalone list routes
+app.use("/api/v1/lists", listRouter);
+
+// List-scoped task routes
+app.use("/api/v1/lists/:listId/tasks", listTaskRouter);
+
+// Standalone task routes
+app.use("/api/v1/tasks", taskRoutes);
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Legacy Routes (backward compatibility)
+// ══════════════════════════════════════════════════════════════════════════════
+
 app.use("/api/auth", (_req, res) => {
   const newPath = _req.originalUrl.replace("/api/auth", "/api/v1/auth");
   res.redirect(308, newPath);
