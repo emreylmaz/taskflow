@@ -191,7 +191,10 @@ router.delete(
   requireProjectAccess("ADMIN"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await projectService.removeMember(req.params.memberId as string);
+      await projectService.removeMember(
+        req.params.memberId as string,
+        req.projectRole!,
+      );
       res.status(204).send();
     } catch (error) {
       next(error);

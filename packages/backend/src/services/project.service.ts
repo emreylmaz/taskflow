@@ -318,6 +318,13 @@ export async function updateMemberRole(
     throw ApiError.badRequest("OWNER rolü atanamaz");
   }
 
+  // Sadece OWNER, ADMIN'leri yönetebilir (ADMIN başka ADMIN'i değiştiremez)
+  if (member.role === "ADMIN" && currentUserRole !== "OWNER") {
+    throw ApiError.forbidden(
+      "Sadece proje sahibi ADMIN'lerin rolünü değiştirebilir",
+    );
+  }
+
   // Sadece OWNER başkasını ADMIN yapabilir
   if (newRole === "ADMIN" && currentUserRole !== "OWNER") {
     throw ApiError.forbidden("Sadece proje sahibi ADMIN atayabilir");
@@ -332,7 +339,10 @@ export async function updateMemberRole(
 /**
  * Üyeyi projeden çıkar
  */
-export async function removeMember(memberId: string): Promise<void> {
+export async function removeMember(
+  memberId: string,
+  currentUserRole: Role,
+): Promise<void> {
   const member = await prisma.projectMember.findUnique({
     where: { id: memberId },
   });
@@ -344,6 +354,13 @@ export async function removeMember(memberId: string): Promise<void> {
   // OWNER çıkarılamaz
   if (member.role === "OWNER") {
     throw ApiError.forbidden("Proje sahibi projeden çıkarılamaz");
+  }
+
+  // Sadece OWNER, ADMIN'leri çıkarabilir (ADMIN başka ADMIN'i çıkaramaz)
+  if (member.role === "ADMIN" && currentUserRole !== "OWNER") {
+    throw ApiError.forbidden(
+      "Sadece proje sahibi ADMIN'leri projeden çıkarabilir",
+    );
   }
 
   await prisma.projectMember.delete({
