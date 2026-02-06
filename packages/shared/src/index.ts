@@ -1,5 +1,3 @@
-// Types
+// Re-export everything from types and schemas
 export * from './types/index.js'
-
-// Schemas
 export * from './schemas/index.js'
