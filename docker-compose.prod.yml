@@ -5,7 +5,7 @@
 
 services:
   # ── PostgreSQL Database ─────────────────────────────────────────────────────
-  postgres:
+  taskflow-db:
     image: postgres:16-alpine
     container_name: taskflow-db
     restart: unless-stopped
@@ -32,11 +32,11 @@ services:
     container_name: taskflow-api
     restart: unless-stopped
     depends_on:
-      postgres:
+      taskflow-db:
         condition: service_healthy
     environment:
       # Database
-      DATABASE_URL: postgresql://${POSTGRES_USER:-taskflow}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-taskflow}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-taskflow}:${POSTGRES_PASSWORD}@taskflow-db:5432/${POSTGRES_DB:-taskflow}?schema=public
       
       # JWT Secrets (generate with: openssl rand -base64 32)
       JWT_SECRET: ${JWT_SECRET:?JWT secret required}
