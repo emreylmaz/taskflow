@@ -4,21 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
     <title>TaskFlow</title>
   </head>
   <body>
-    <!--
-      Vite'ta index.html "entry point"tir.
-      Geleneksel bundler'lar (Webpack gibi) JS dosyasından başlar,
-      ama Vite bir dev server olduğu için HTML'den başlar — tıpkı bir tarayıcı gibi.
-      Tarayıcı bu HTML'i yükler, <script> tag'ini görür ve modülü import eder.
-    -->
     <div id="root"></div>
-    <!--
-      type="module" → Tarayıcıya "bu bir ES Module" der.
-      Vite dev server'da bu dosya doğrudan serve edilir (bundle YOKTUR).
-      Her import ayrı bir HTTP request olur — bu sayede HMR çok hızlı çalışır.
-    -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

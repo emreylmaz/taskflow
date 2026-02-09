@@ -5,6 +5,8 @@
 // ── Enums ───────────────────────────────────────────────
 
 export type Role = 'OWNER' | 'ADMIN' | 'MEMBER'
+export type OrgRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'
+export type TeamRole = 'LEAD' | 'MEMBER'
 export type Priority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 
 // ── User Types ──────────────────────────────────────────
@@ -258,6 +260,94 @@ export interface ApiErrorResponse {
 export interface ValidationError {
   field: string
   message: string
+}
+
+// ── Organization Types ──────────────────────────────────
+
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+  logo?: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface OrganizationWithDetails extends Organization {
+  memberCount: number
+  teamCount: number
+  projectCount: number
+}
+
+export interface OrganizationMember {
+  id: string
+  role: OrgRole
+  joinedAt: Date
+  user: User
+}
+
+export interface CreateOrganizationRequest {
+  name: string
+  slug?: string  // auto-generate from name if not provided
+  logo?: string
+}
+
+export interface UpdateOrganizationRequest {
+  name?: string
+  slug?: string
+  logo?: string | null
+}
+
+export interface AddOrgMemberRequest {
+  email: string
+  role?: OrgRole
+}
+
+export interface UpdateOrgMemberRequest {
+  role: OrgRole
+}
+
+// ── Team Types ──────────────────────────────────────────
+
+export interface Team {
+  id: string
+  name: string
+  description?: string | null
+  organizationId: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export interface TeamWithDetails extends Team {
+  memberCount: number
+  organization?: { id: string; name: string; slug: string }
+}
+
+export interface TeamMember {
+  id: string
+  role: TeamRole
+  joinedAt: Date
+  user: User
+}
+
+export interface CreateTeamRequest {
+  name: string
+  description?: string
+  organizationId: string
+}
+
+export interface UpdateTeamRequest {
+  name?: string
+  description?: string | null
+}
+
+export interface AddTeamMemberRequest {
+  userId: string
+  role?: TeamRole
+}
+
+export interface UpdateTeamMemberRequest {
+  role: TeamRole
 }
 
 // ── Health Check Types ──────────────────────────────────
