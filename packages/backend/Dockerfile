@@ -53,7 +53,8 @@ COPY --from=builder --chown=taskflow:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=taskflow:nodejs /app/packages/backend/dist ./dist
 COPY --from=builder --chown=taskflow:nodejs /app/packages/backend/package.json ./
 COPY --from=builder --chown=taskflow:nodejs /app/packages/backend/prisma ./prisma
-COPY --from=builder --chown=taskflow:nodejs /app/packages/backend/node_modules/.prisma ./node_modules/.prisma
+# Prisma client (monorepo'da root node_modules'da generate edilir)
+COPY --from=builder --chown=taskflow:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=taskflow:nodejs /app/packages/shared/dist ./node_modules/@taskflow/shared/dist
 COPY --from=builder --chown=taskflow:nodejs /app/packages/shared/package.json ./node_modules/@taskflow/shared/
 
