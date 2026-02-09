@@ -1,13 +1,13 @@
 /**
  * ProjectCard Component
- * Modern animated project card with hover effects
+ * Proje kartı (grid içinde gösterilir)
  */
 
 import { Link } from "react-router";
 import { Users, CheckSquare, MoreVertical, Trash2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { ProjectWithDetails } from "@taskflow/shared";
 import { useState, useRef, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 interface ProjectCardProps {
   project: ProjectWithDetails;
@@ -18,6 +18,7 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // Click outside to close menu
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -40,42 +41,40 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      whileHover={{ y: -4 }}
-      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-      className="relative bg-white dark:bg-surface-800 rounded-xl shadow-sm hover:shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden group transition-shadow"
+    <div
+      className={cn(
+        "relative bg-white dark:bg-surface-800 rounded-xl shadow-sm",
+        "border border-gray-200 dark:border-surface-700",
+        "hover:shadow-md transition-shadow",
+      )}
     >
       {/* Color Bar */}
-      <motion.div
-        className="h-1.5"
+      <div
+        className="h-2 rounded-t-xl"
         style={{ backgroundColor: project.color }}
-        initial={{ scaleX: 0 }}
-        animate={{ scaleX: 1 }}
-        transition={{ delay: 0.2, duration: 0.3 }}
       />
 
-      {/* Content */}
-      <Link to={`/projects/${project.id}`} className="block p-5">
-        <h3 className="font-semibold text-surface-900 dark:text-surface-100 truncate group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors">
+      {/* Content - Link is naturally keyboard accessible */}
+      <Link
+        to={`/projects/${project.id}`}
+        className="block p-4 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary-500 rounded-b-xl"
+      >
+        <h3 className="font-semibold text-gray-900 dark:text-surface-100 truncate">
           {project.name}
         </h3>
         {project.description && (
-          <p className="text-sm text-surface-500 dark:text-surface-400 mt-1.5 line-clamp-2">
+          <p className="text-sm text-gray-500 dark:text-surface-400 mt-1 line-clamp-2">
             {project.description}
           </p>
         )}
 
         {/* Stats */}
-        <div className="flex items-center gap-4 mt-4 text-sm text-surface-500 dark:text-surface-400">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-4 mt-4 text-sm text-gray-500 dark:text-surface-400">
+          <div className="flex items-center gap-1">
             <Users className="w-4 h-4" />
             <span>{project.memberCount}</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <CheckSquare className="w-4 h-4" />
             <span>{project.taskCount}</span>
           </div>
@@ -84,63 +83,70 @@ export function ProjectCard({ project, onDelete }: ProjectCardProps) {
 
       {/* Menu Button (only for OWNER) */}
       {project.role === "OWNER" && (
-        <div className="absolute top-4 right-4" ref={menuRef}>
-          <motion.button
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+        <div className="absolute top-3 right-3" ref={menuRef}>
+          <button
             onClick={(e) => {
               e.preventDefault();
               setShowMenu(!showMenu);
             }}
-            className="p-1.5 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-700 transition-colors"
+            aria-label="Proje menüsü"
+            aria-expanded={showMenu}
+            aria-haspopup="menu"
+            className={cn(
+              "p-1 rounded hover:bg-gray-100 dark:hover:bg-surface-700 transition",
+              "focus:outline-none focus:ring-2 focus:ring-primary-500",
+            )}
           >
-            <MoreVertical className="w-4 h-4 text-surface-400" />
-          </motion.button>
+            <MoreVertical className="w-4 h-4 text-gray-400" />
+          </button>
 
           {/* Dropdown Menu */}
-          <AnimatePresence>
-            {showMenu && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 mt-1 w-44 bg-white dark:bg-surface-800 rounded-xl shadow-xl border border-surface-200 dark:border-surface-700 py-1.5 z-10"
+          {showMenu && (
+            <div
+              role="menu"
+              className={cn(
+                "absolute right-0 mt-1 w-40 bg-white dark:bg-surface-800",
+                "rounded-lg shadow-lg border border-gray-200 dark:border-surface-700",
+                "py-1 z-10",
+              )}
+            >
+              <button
+                role="menuitem"
+                onClick={handleDelete}
+                className={cn(
+                  "flex items-center gap-2 w-full px-3 py-2 text-sm",
+                  "text-red-600 dark:text-red-400",
+                  "hover:bg-red-50 dark:hover:bg-red-500/10 transition",
+                )}
               >
-                <button
-                  onClick={handleDelete}
-                  className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-error-600 dark:text-error-400 hover:bg-error-50 dark:hover:bg-error-500/10 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Projeyi Sil
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <Trash2 className="w-4 h-4" />
+                Projeyi Sil
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {/* Role Badge */}
-      <div className="absolute bottom-4 right-4">
-        <motion.span
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.3, type: "spring" }}
-          className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-            project.role === "OWNER"
-              ? "bg-primary-100 text-primary-700 dark:bg-primary-500/20 dark:text-primary-300"
-              : project.role === "ADMIN"
-                ? "bg-warning-100 text-warning-700 dark:bg-warning-500/20 dark:text-warning-300"
-                : "bg-surface-100 text-surface-600 dark:bg-surface-700 dark:text-surface-300"
-          }`}
+      <div className="absolute bottom-3 right-3">
+        <span
+          className={cn(
+            "text-xs px-2 py-0.5 rounded-full",
+            project.role === "OWNER" &&
+              "bg-indigo-100 text-indigo-700 dark:bg-primary-500/20 dark:text-primary-300",
+            project.role === "ADMIN" &&
+              "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+            project.role === "MEMBER" &&
+              "bg-gray-100 text-gray-600 dark:bg-surface-700 dark:text-surface-300",
+          )}
         >
           {project.role === "OWNER"
             ? "Sahip"
             : project.role === "ADMIN"
               ? "Admin"
               : "Üye"}
-        </motion.span>
+        </span>
       </div>
-    </motion.div>
+    </div>
   );
 }

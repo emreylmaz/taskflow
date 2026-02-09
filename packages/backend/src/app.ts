@@ -8,8 +8,6 @@ import authRoutes from "./routes/auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
 import listRoutes, { listRouter } from "./routes/list.routes.js";
 import taskRoutes, { listTaskRouter } from "./routes/task.routes.js";
-import organizationRoutes from "./routes/organization.routes.js";
-import { orgTeamRouter, standaloneTeamRouter } from "./routes/team.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { requestLogger } from "./middleware/requestLogger.js";
 import { env } from "./config/env.js";
@@ -21,7 +19,7 @@ const app = express();
 app.use(helmet()); // Security headers
 app.use(
   cors({
-    origin: env.CORS_ORIGIN.split(",").map((o) => o.trim()),
+    origin: env.CORS_ORIGIN,
     credentials: true,
   }),
 );
@@ -105,15 +103,6 @@ app.use("/api/v1/auth", authRoutes);
 
 // Project routes
 app.use("/api/v1/projects", projectRoutes);
-
-// Organization routes
-app.use("/api/v1/organizations", organizationRoutes);
-
-// Organization-scoped team routes
-app.use("/api/v1/organizations/:orgId/teams", orgTeamRouter);
-
-// Standalone team routes (user's teams)
-app.use("/api/v1/teams", standaloneTeamRouter);
 
 // Project-scoped list routes
 app.use("/api/v1/projects/:projectId/lists", listRoutes);

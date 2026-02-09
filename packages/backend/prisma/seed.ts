@@ -3,7 +3,7 @@
  * Çalıştırma: npx prisma db seed
  */
 
-import { PrismaClient, Role, Priority, OrgRole, TeamRole } from "@prisma/client";
+import { PrismaClient, Role, Priority } from "@prisma/client";
 import { hashPassword } from "../src/utils/hash.js";
 
 const prisma = new PrismaClient();
@@ -181,66 +181,6 @@ async function main() {
   ]);
 
   console.log(`  ✓ Created ${tasks.length} tasks\n`);
-
-  // ── Organization & Teams ────────────────────────────────
-  console.log("Creating organization and teams...");
-
-  // Mevcut organizasyonu temizle
-  await prisma.organization.deleteMany({
-    where: { slug: "acme-corp" },
-  });
-
-  const organization = await prisma.organization.create({
-    data: {
-      name: "Acme Corporation",
-      slug: "acme-corp",
-      logo: "https://api.dicebear.com/7.x/identicon/svg?seed=acme",
-      members: {
-        create: [
-          { userId: user1.id, role: OrgRole.OWNER },
-          { userId: user2.id, role: OrgRole.MEMBER },
-        ],
-      },
-    },
-  });
-
-  console.log(`  ✓ Organization: ${organization.name} (${organization.slug})`);
-
-  // Teams oluştur
-  const devTeam = await prisma.team.create({
-    data: {
-      name: "Development Team",
-      description: "Frontend ve Backend geliştirme ekibi",
-      organizationId: organization.id,
-      members: {
-        create: [
-          { userId: user1.id, role: TeamRole.LEAD },
-          { userId: user2.id, role: TeamRole.MEMBER },
-        ],
-      },
-    },
-  });
-
-  const designTeam = await prisma.team.create({
-    data: {
-      name: "Design Team",
-      description: "UI/UX tasarım ekibi",
-      organizationId: organization.id,
-      members: {
-        create: [{ userId: user1.id, role: TeamRole.MEMBER }],
-      },
-    },
-  });
-
-  console.log(`  ✓ Teams: ${devTeam.name}, ${designTeam.name}\n`);
-
-  // Projeyi organizasyona bağla
-  await prisma.project.update({
-    where: { id: project.id },
-    data: { organizationId: organization.id },
-  });
-
-  console.log(`  ✓ Project "${project.name}" linked to organization\n`);
 
   console.log("✅ Seed completed!");
   console.log("\nTest credentials:");
