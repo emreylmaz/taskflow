@@ -52,6 +52,14 @@ services:
       - "${BACKEND_PORT:-3000}:3000"
     networks:
       - taskflow-network
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.taskflow-api.rule=Host(`api.taskflow.emreyilmaz.io`)"
+      - "traefik.http.routers.taskflow-api.entrypoints=https"
+      - "traefik.http.routers.taskflow-api.tls=true"
+      - "traefik.http.routers.taskflow-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.taskflow-api.loadbalancer.server.port=3000"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
       interval: 30s
@@ -68,3 +76,5 @@ volumes:
 networks:
   taskflow-network:
     driver: bridge
+  coolify:
+    external: true
