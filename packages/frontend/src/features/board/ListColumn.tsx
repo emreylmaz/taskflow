@@ -56,7 +56,7 @@ export function ListColumn({
     <div
       className={`flex flex-col w-72 max-h-full rounded-xl border shrink-0 transition-all ${
         isBlocked
-          ? "bg-gray-100 border-gray-300 opacity-60"
+          ? "bg-gray-100 border-gray-300 opacity-60 cursor-not-allowed"
           : "bg-gray-50 border-gray-200"
       }`}
     >

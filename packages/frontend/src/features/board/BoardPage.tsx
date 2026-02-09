@@ -67,7 +67,7 @@ export default function BoardPage() {
         setLists(newLists);
         // API call
         await reorderLists(newLists.map((l) => l.id));
-      } catch (err) {
+      } catch {
         // Rollback on error
         setLists(previousLists);
         toast.error("Listeler yeniden sıralanamadı");
@@ -91,7 +91,7 @@ export default function BoardPage() {
           listId,
           newTasks.map((t) => t.id),
         );
-      } catch (err) {
+      } catch {
         // Rollback on error
         setLists(previousLists);
         toast.error("Görevler yeniden sıralanamadı");

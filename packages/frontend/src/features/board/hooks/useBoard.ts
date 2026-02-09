@@ -156,7 +156,10 @@ export function useBoard(projectId: string | undefined): UseBoardReturn {
             if (task.id !== taskId) return task;
 
             // Merge data, handle date string to Date conversion for local state
-            const updated: any = { ...task, ...data };
+            const updated: TaskWithDetails = {
+              ...task,
+              ...data,
+            } as TaskWithDetails;
             if (typeof data.dueDate === "string") {
               updated.dueDate = new Date(data.dueDate);
             } else if (data.dueDate === null) {
