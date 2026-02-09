@@ -7,8 +7,6 @@ import { z } from 'zod'
 // ── Enums ───────────────────────────────────────────────
 
 export const roleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER'])
-export const orgRoleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'])
-export const teamRoleSchema = z.enum(['LEAD', 'MEMBER'])
 export const prioritySchema = z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT'])
 
 // ── Auth Schemas ────────────────────────────────────────
@@ -149,52 +147,6 @@ export const updateMemberSchema = z.object({
   role: roleSchema,
 })
 
-// ── Organization Schemas ────────────────────────────────
-
-const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-
-export const createOrganizationSchema = z.object({
-  name: z.string().min(2, 'Organizasyon adı en az 2 karakter olmalı').max(100, 'Organizasyon adı en fazla 100 karakter olabilir'),
-  slug: z.string().regex(slugRegex, 'Slug sadece küçük harf, rakam ve tire içerebilir').min(2).max(50).optional(),
-  logo: z.string().url('Geçerli bir URL girin').optional(),
-})
-
-export const updateOrganizationSchema = z.object({
-  name: z.string().min(2, 'Organizasyon adı en az 2 karakter olmalı').max(100, 'Organizasyon adı en fazla 100 karakter olabilir').optional(),
-  slug: z.string().regex(slugRegex, 'Slug sadece küçük harf, rakam ve tire içerebilir').min(2).max(50).optional(),
-  logo: z.string().url('Geçerli bir URL girin').nullable().optional(),
-})
-
-export const addOrgMemberSchema = z.object({
-  email: z.string().email('Geçerli bir e-posta girin'),
-  role: orgRoleSchema.optional().default('MEMBER'),
-})
-
-export const updateOrgMemberSchema = z.object({
-  role: orgRoleSchema,
-})
-
-// ── Team Schemas ────────────────────────────────────────
-
-export const createTeamSchema = z.object({
-  name: z.string().min(2, 'Takım adı en az 2 karakter olmalı').max(100, 'Takım adı en fazla 100 karakter olabilir'),
-  description: z.string().max(500, 'Açıklama en fazla 500 karakter olabilir').optional(),
-})
-
-export const updateTeamSchema = z.object({
-  name: z.string().min(2, 'Takım adı en az 2 karakter olmalı').max(100, 'Takım adı en fazla 100 karakter olabilir').optional(),
-  description: z.string().max(500, 'Açıklama en fazla 500 karakter olabilir').nullable().optional(),
-})
-
-export const addTeamMemberSchema = z.object({
-  userId: z.string().min(1, 'Kullanıcı ID gerekli'),
-  role: teamRoleSchema.optional().default('MEMBER'),
-})
-
-export const updateTeamMemberSchema = z.object({
-  role: teamRoleSchema,
-})
-
 // ── Response Schemas ────────────────────────────────────
 
 export const authResponseSchema = z.object({
@@ -244,10 +196,58 @@ export type UpdateLabelInput = z.infer<typeof updateLabelSchema>
 export type AddMemberInput = z.infer<typeof addMemberSchema>
 export type UpdateMemberInput = z.infer<typeof updateMemberSchema>
 
+// ── Organization Schemas ────────────────────────────────
+
+export const orgRoleSchema = z.enum(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'])
+
+export const createOrganizationSchema = z.object({
+  name: z.string().min(1, 'Organizasyon adı gerekli').max(100),
+  slug: z.string().min(1, 'Slug gerekli').max(50).regex(/^[a-z0-9-]+$/, 'Slug sadece küçük harf, rakam ve tire içerebilir'),
+  logo: z.string().url().optional(),
+})
+
+export const updateOrganizationSchema = z.object({
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/, 'Slug sadece küçük harf, rakam ve tire içerebilir').optional(),
+  name: z.string().min(1).max(100).optional(),
+  logo: z.string().url().nullable().optional(),
+})
+
+export const addOrgMemberSchema = z.object({
+  email: z.string().email('Geçerli bir e-posta girin'),
+  role: orgRoleSchema.optional().default('MEMBER'),
+})
+
+export const updateOrgMemberSchema = z.object({
+  role: orgRoleSchema,
+})
+
 export type CreateOrganizationInput = z.infer<typeof createOrganizationSchema>
 export type UpdateOrganizationInput = z.infer<typeof updateOrganizationSchema>
 export type AddOrgMemberInput = z.infer<typeof addOrgMemberSchema>
 export type UpdateOrgMemberInput = z.infer<typeof updateOrgMemberSchema>
+
+// ── Team Schemas ────────────────────────────────────────
+
+export const teamRoleSchema = z.enum(['LEAD', 'MEMBER'])
+
+export const createTeamSchema = z.object({
+  name: z.string().min(1, 'Takım adı gerekli').max(100),
+  description: z.string().max(500).optional(),
+})
+
+export const updateTeamSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).nullable().optional(),
+})
+
+export const addTeamMemberSchema = z.object({
+  userId: z.string().min(1, 'Kullanıcı ID gerekli'),
+  role: teamRoleSchema.optional().default('MEMBER'),
+})
+
+export const updateTeamMemberSchema = z.object({
+  role: teamRoleSchema,
+})
 
 export type CreateTeamInput = z.infer<typeof createTeamSchema>
 export type UpdateTeamInput = z.infer<typeof updateTeamSchema>
