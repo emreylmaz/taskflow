@@ -345,6 +345,49 @@ export async function reorderLists(
 }
 
 /**
+ * Liste flow control ayarlarını güncelle
+ */
+export async function updateFlowControl(
+  listId: string,
+  requiredRoleToEnter: Role[],
+  requiredRoleToLeave: Role[],
+): Promise<ListWithTaskCount> {
+  const existing = await prisma.list.findUnique({
+    where: { id: listId },
+  });
+
+  if (!existing) {
+    throw ApiError.notFound("Liste bulunamadı");
+  }
+
+  // Archive listesinin flow control ayarları değiştirilemez
+  if (existing.isArchive) {
+    throw ApiError.badRequest(
+      "Arşiv listesinin flow control ayarları değiştirilemez",
+    );
+  }
+
+  const list = await prisma.list.update({
+    where: { id: listId },
+    data: {
+      requiredRoleToEnter,
+      requiredRoleToLeave,
+    },
+    include: {
+      _count: {
+        select: {
+          tasks: {
+            where: { archivedAt: null },
+          },
+        },
+      },
+    },
+  });
+
+  return toListWithCount(list);
+}
+
+/**
  * Archive listesini getir
  */
 export async function getArchiveList(

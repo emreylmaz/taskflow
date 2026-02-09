@@ -81,6 +81,11 @@ export const updateListSchema = z.object({
   requiredRoleToLeave: z.array(roleSchema).optional(),
 })
 
+export const updateFlowControlSchema = z.object({
+  requiredRoleToEnter: z.array(roleSchema),
+  requiredRoleToLeave: z.array(roleSchema),
+})
+
 export const reorderListsSchema = z.object({
   listIds: z.array(z.string()).min(1, 'En az bir liste ID\'si gerekli'),
 })
@@ -176,6 +181,7 @@ export type UpdateProjectInput = z.infer<typeof updateProjectSchema>
 
 export type CreateListInput = z.infer<typeof createListSchema>
 export type UpdateListInput = z.infer<typeof updateListSchema>
+export type UpdateFlowControlInput = z.infer<typeof updateFlowControlSchema>
 export type ReorderListsInput = z.infer<typeof reorderListsSchema>
 
 export type CreateTaskInput = z.infer<typeof createTaskSchema>

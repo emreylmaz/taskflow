@@ -13,12 +13,16 @@ interface SortableListProps {
   list: ListWithTasks;
   onTaskClick: (task: TaskWithDetails) => void;
   onCreateTask: (listId: string, title: string) => Promise<void>;
+  onSettingsClick?: (list: ListWithTasks) => void;
+  isBlocked?: boolean;
 }
 
 export function SortableList({
   list,
   onTaskClick,
   onCreateTask,
+  onSettingsClick,
+  isBlocked,
 }: SortableListProps) {
   const {
     attributes,
@@ -53,6 +57,8 @@ export function SortableList({
           list={list}
           onTaskClick={onTaskClick}
           onCreateTask={onCreateTask}
+          onSettingsClick={onSettingsClick}
+          isBlocked={isBlocked}
           renderTask={(task) => (
             <SortableTask
               key={task.id}

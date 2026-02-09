@@ -9,6 +9,7 @@ import {
   createListSchema,
   updateListSchema,
   reorderListsSchema,
+  updateFlowControlSchema,
 } from "@taskflow/shared";
 import { validate } from "../middleware/validate.js";
 import { authenticate } from "../middleware/auth.js";
@@ -142,6 +143,28 @@ listRouter.put(
       const list = await listService.updateList(
         req.params.id as string,
         req.body,
+      );
+      res.json(list);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * PUT /api/v1/lists/:id/flow-control
+ * Liste flow control ayarlarını güncelle (Admin+)
+ */
+listRouter.put(
+  "/:id/flow-control",
+  requireListAccess("ADMIN"),
+  validate(updateFlowControlSchema),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const list = await listService.updateFlowControl(
+        req.params.id as string,
+        req.body.requiredRoleToEnter,
+        req.body.requiredRoleToLeave,
       );
       res.json(list);
     } catch (error) {

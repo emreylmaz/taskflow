@@ -10,10 +10,12 @@ import type {
   ListWithTasks,
   CreateListRequest,
   UpdateListRequest,
+  UpdateFlowControlRequest,
   CreateTaskRequest,
   UpdateTaskRequest,
   MoveTaskRequest,
   TaskWithDetails,
+  Role,
 } from "@taskflow/shared";
 
 interface UseBoardReturn {
@@ -21,10 +23,15 @@ interface UseBoardReturn {
   lists: ListWithTasks[];
   isLoading: boolean;
   error: string | null;
+  userRole: Role;
   refetch: () => Promise<void>;
   setLists: React.Dispatch<React.SetStateAction<ListWithTasks[]>>;
   createList: (data: CreateListRequest) => Promise<void>;
   updateList: (listId: string, data: UpdateListRequest) => Promise<void>;
+  updateFlowControl: (
+    listId: string,
+    data: UpdateFlowControlRequest,
+  ) => Promise<void>;
   deleteList: (listId: string) => Promise<void>;
   reorderLists: (listIds: string[]) => Promise<void>;
   createTask: (listId: string, data: CreateTaskRequest) => Promise<void>;
@@ -85,6 +92,25 @@ export function useBoard(projectId: string | undefined): UseBoardReturn {
         prev.map((list) => (list.id === listId ? { ...list, ...data } : list)),
       );
       await api.put(`/lists/${listId}`, data);
+    },
+    [],
+  );
+
+  const updateFlowControl = useCallback(
+    async (listId: string, data: UpdateFlowControlRequest) => {
+      // Optimistic update
+      setLists((prev) =>
+        prev.map((list) =>
+          list.id === listId
+            ? {
+                ...list,
+                requiredRoleToEnter: data.requiredRoleToEnter,
+                requiredRoleToLeave: data.requiredRoleToLeave,
+              }
+            : list,
+        ),
+      );
+      await api.put(`/lists/${listId}/flow-control`, data);
     },
     [],
   );
@@ -177,10 +203,12 @@ export function useBoard(projectId: string | undefined): UseBoardReturn {
     lists,
     isLoading,
     error,
+    userRole: project?.role || "MEMBER",
     refetch: fetchBoardData,
     setLists,
     createList,
     updateList,
+    updateFlowControl,
     deleteList,
     reorderLists,
     createTask,

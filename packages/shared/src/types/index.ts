@@ -139,6 +139,11 @@ export interface UpdateListRequest {
   requiredRoleToLeave?: Role[]
 }
 
+export interface UpdateFlowControlRequest {
+  requiredRoleToEnter: Role[]
+  requiredRoleToLeave: Role[]
+}
+
 export interface ReorderListsRequest {
   listIds: string[]
 }

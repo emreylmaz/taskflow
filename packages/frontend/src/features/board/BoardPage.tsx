@@ -3,7 +3,7 @@
  * Ana Board sayfası
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useRef } from "react";
 import { useParams } from "react-router";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -12,11 +12,13 @@ import {
   horizontalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useBoard } from "./hooks/useBoard";
+import { useFlowControl } from "./hooks/useFlowControl";
 import { BoardHeader } from "./BoardHeader";
 import { SortableList } from "./SortableList";
 import { CreateListButton } from "./CreateListButton";
 import { TaskDrawer } from "./TaskDrawer";
 import { BoardDndWrapper } from "./BoardDndWrapper";
+import { ListSettingsModal } from "./ListSettingsModal";
 import type { TaskWithDetails, ListWithTasks } from "@taskflow/shared";
 
 export default function BoardPage() {
@@ -26,8 +28,11 @@ export default function BoardPage() {
     lists,
     isLoading,
     error,
+    userRole,
     setLists,
     createList,
+    updateList,
+    updateFlowControl,
     createTask,
     updateTask,
     deleteTask,
@@ -39,8 +44,19 @@ export default function BoardPage() {
   const [selectedTask, setSelectedTask] = useState<TaskWithDetails | null>(
     null,
   );
+  const [settingsList, setSettingsList] = useState<ListWithTasks | null>(null);
+  const [blockedListIds, setBlockedListIds] = useState<string[]>([]);
+
+  // Track currently dragged task for flow control
+  const draggingTaskRef = useRef<TaskWithDetails | null>(null);
 
   const listIds = useMemo(() => lists.map((l) => l.id), [lists]);
+
+  // Flow control hook
+  const flowControl = useFlowControl({
+    lists,
+    userRole,
+  });
 
   // Handlers for DnD with error handling
   const handleReorderLists = useCallback(
@@ -92,6 +108,22 @@ export default function BoardPage() {
       newIndex: number,
     ) => {
       const previousLists = lists;
+
+      // Find the task being moved
+      const fromList = lists.find((l) => l.id === fromListId);
+      const task = fromList?.tasks.find((t) => t.id === taskId);
+
+      if (!task) return;
+
+      // Flow control check (client-side validation)
+      if (fromListId !== toListId) {
+        const blockedReason = flowControl.getMoveBlockedReason(task, toListId);
+        if (blockedReason) {
+          toast.error(blockedReason);
+          return;
+        }
+      }
+
       try {
         // Optimistic update: Move task between lists
         setLists((prev) => {
@@ -117,16 +149,38 @@ export default function BoardPage() {
             return list;
           });
         });
-        // API call
+        // API call (server-side validation will also run)
         await moveTask(taskId, { listId: toListId, position: newIndex });
-      } catch (err) {
+      } catch (err: unknown) {
         // Rollback on error
         setLists(previousLists);
-        toast.error("Görev taşınamadı");
+        const errorMessage =
+          err instanceof Error ? err.message : "Görev taşınamadı";
+        toast.error(errorMessage);
       }
     },
-    [lists, setLists, moveTask],
+    [lists, setLists, moveTask, flowControl],
   );
+
+  // Update blocked lists when drag starts
+  const handleDragStart = useCallback(
+    (task: TaskWithDetails | null) => {
+      draggingTaskRef.current = task;
+      if (task) {
+        const blocked = flowControl.getBlockedListIds(task);
+        setBlockedListIds(blocked);
+      } else {
+        setBlockedListIds([]);
+      }
+    },
+    [flowControl],
+  );
+
+  // Clear blocked lists when drag ends
+  const handleDragEnd = useCallback(() => {
+    draggingTaskRef.current = null;
+    setBlockedListIds([]);
+  }, []);
 
   if (isLoading) {
     return (
@@ -159,6 +213,8 @@ export default function BoardPage() {
           onReorderLists={handleReorderLists}
           onReorderTasks={handleReorderTasks}
           onMoveTask={handleMoveTask}
+          onDragStartCallback={handleDragStart}
+          onDragEndCallback={handleDragEnd}
         >
           <div className="h-full p-4 inline-flex items-start gap-4">
             <SortableContext
@@ -173,6 +229,8 @@ export default function BoardPage() {
                   onCreateTask={(listId, title) =>
                     createTask(listId, { title })
                   }
+                  onSettingsClick={setSettingsList}
+                  isBlocked={blockedListIds.includes(list.id)}
                 />
               ))}
             </SortableContext>
@@ -198,6 +256,22 @@ export default function BoardPage() {
           await deleteTask(taskId);
           setSelectedTask(null);
         }}
+      />
+
+      {/* List Settings Modal */}
+      <ListSettingsModal
+        list={settingsList}
+        isOpen={!!settingsList}
+        onClose={() => setSettingsList(null)}
+        onUpdate={async (listId, data) => {
+          await updateList(listId, data);
+        }}
+        onUpdateFlowControl={async (listId, data) => {
+          await updateFlowControl(listId, data);
+          toast.success("Flow control ayarları güncellendi");
+        }}
+        userRole={userRole}
+        flowControlEnabled={project?.modules?.flow_control !== false}
       />
     </div>
   );
