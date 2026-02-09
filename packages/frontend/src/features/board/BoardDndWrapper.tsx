@@ -30,6 +30,8 @@ interface BoardDndWrapperProps {
     toListId: string,
     newIndex: number,
   ) => void;
+  onDragStartCallback?: (task: TaskWithDetails | null) => void;
+  onDragEndCallback?: () => void;
 }
 
 const dropAnimation: DropAnimation = {
@@ -48,6 +50,8 @@ export function BoardDndWrapper({
   onReorderLists,
   onReorderTasks,
   onMoveTask,
+  onDragStartCallback,
+  onDragEndCallback,
 }: BoardDndWrapperProps) {
   const [activeTask, setActiveTask] = useState<TaskWithDetails | null>(null);
   const [activeList, setActiveList] = useState<ListWithTasks | null>(null);
@@ -67,9 +71,13 @@ export function BoardDndWrapper({
     const { active } = event;
 
     if (active.data.current?.type === "Task") {
-      setActiveTask(active.data.current.task);
+      const task = active.data.current.task as TaskWithDetails;
+      setActiveTask(task);
+      // Notify parent for flow control
+      onDragStartCallback?.(task);
     } else if (active.data.current?.type === "List") {
       setActiveList(active.data.current.list);
+      onDragStartCallback?.(null);
     }
   };
 
@@ -186,6 +194,8 @@ export function BoardDndWrapper({
 
     setActiveTask(null);
     setActiveList(null);
+    // Notify parent that drag ended
+    onDragEndCallback?.();
   };
 
   return (

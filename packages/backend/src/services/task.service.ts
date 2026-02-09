@@ -12,6 +12,7 @@ import type {
   MoveTaskInput,
   TaskWithDetails,
   Priority,
+  Role,
 } from "@taskflow/shared";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -269,14 +270,55 @@ export async function updateTask(
 }
 
 /**
+ * Flow control validation helper
+ * Checks if user has permission to move task out of source list and into target list
+ */
+export async function validateFlowControl(
+  sourceList: { requiredRoleToLeave: string[] },
+  targetList: { requiredRoleToEnter: string[] },
+  userRole: Role,
+): Promise<{ allowed: boolean; reason?: string }> {
+  // Check leave permission
+  if (sourceList.requiredRoleToLeave.length > 0) {
+    if (!sourceList.requiredRoleToLeave.includes(userRole)) {
+      return {
+        allowed: false,
+        reason: "Bu listeden görev taşıma yetkiniz yok",
+      };
+    }
+  }
+
+  // Check enter permission
+  if (targetList.requiredRoleToEnter.length > 0) {
+    if (!targetList.requiredRoleToEnter.includes(userRole)) {
+      return {
+        allowed: false,
+        reason: "Hedef listeye görev taşıma yetkiniz yok",
+      };
+    }
+  }
+
+  return { allowed: true };
+}
+
+/**
  * Task'ı başka listeye taşı
  */
 export async function moveTask(
   taskId: string,
   input: MoveTaskInput,
+  userRole?: Role,
 ): Promise<TaskWithDetails> {
   const task = await prisma.task.findUnique({
     where: { id: taskId },
+    include: {
+      list: {
+        select: {
+          id: true,
+          requiredRoleToLeave: true,
+        },
+      },
+    },
   });
 
   if (!task) {
@@ -295,6 +337,21 @@ export async function moveTask(
   // Aynı projeye ait olmalı
   if (targetList.projectId !== task.projectId) {
     throw ApiError.badRequest("Görev farklı bir projeye taşınamaz");
+  }
+
+  // Skip flow control check if moving to same list (reorder)
+  if (task.listId !== input.listId && userRole) {
+    const flowCheck = await validateFlowControl(
+      { requiredRoleToLeave: task.list.requiredRoleToLeave as string[] },
+      { requiredRoleToEnter: targetList.requiredRoleToEnter as string[] },
+      userRole,
+    );
+
+    if (!flowCheck.allowed) {
+      throw ApiError.forbidden(
+        flowCheck.reason || "Bu taşıma işlemi için yetkiniz yok",
+      );
+    }
   }
 
   // Archive'a taşınıyorsa archivedAt set et

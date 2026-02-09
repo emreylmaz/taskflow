@@ -121,6 +121,7 @@ taskRouter.put(
 /**
  * PATCH /api/v1/tasks/:id/move
  * Task'ı başka listeye taşı
+ * Flow control validasyonu uygulanır
  */
 taskRouter.patch(
   "/:id/move",
@@ -131,6 +132,7 @@ taskRouter.patch(
       const task = await taskService.moveTask(
         req.params.id as string,
         req.body,
+        req.projectRole, // Flow control için user role
       );
       res.json(task);
     } catch (error) {
