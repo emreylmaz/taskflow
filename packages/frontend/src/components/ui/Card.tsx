@@ -5,6 +5,7 @@
 
 import { forwardRef, type HTMLAttributes, type ReactNode } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 type CardVariant = "default" | "elevated" | "outlined" | "filled";
 
@@ -49,14 +50,14 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         whileHover={hoverAnimation}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        className={`
-          rounded-xl overflow-hidden
-          transition-shadow duration-200
-          ${variantStyles[variant]}
-          ${hoverable ? "hover:shadow-lg" : ""}
-          ${clickable ? "cursor-pointer" : ""}
-          ${className}
-        `}
+        className={cn(
+          "rounded-xl overflow-hidden",
+          "transition-shadow duration-200",
+          variantStyles[variant],
+          hoverable && "hover:shadow-lg",
+          clickable && "cursor-pointer",
+          className,
+        )}
         {...props}
       >
         {colorBar && (
@@ -96,7 +97,7 @@ export function CardHeader({
 }: CardHeaderProps) {
   return (
     <div
-      className={`flex items-center justify-between ${className}`}
+      className={cn("flex items-center justify-between", className)}
       {...props}
     >
       <div>

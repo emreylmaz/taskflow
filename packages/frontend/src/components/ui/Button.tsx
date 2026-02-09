@@ -6,6 +6,7 @@
 import { forwardRef, type ReactNode } from "react";
 import { motion, type HTMLMotionProps } from "framer-motion";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "success";
 type ButtonSize = "sm" | "md" | "lg";
@@ -63,17 +64,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         whileTap={!isDisabled ? { scale: 0.98 } : undefined}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
         disabled={isDisabled}
-        className={`
-          inline-flex items-center justify-center font-medium rounded-lg
-          transition-colors duration-200
-          focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
-          dark:focus:ring-offset-surface-900
-          disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none
-          ${variants[variant]}
-          ${sizes[size]}
-          ${fullWidth ? "w-full" : ""}
-          ${className}
-        `}
+        className={cn(
+          "inline-flex items-center justify-center font-medium rounded-lg",
+          "transition-colors duration-200",
+          "focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2",
+          "dark:focus:ring-offset-surface-900",
+          "disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none",
+          variants[variant],
+          sizes[size],
+          fullWidth && "w-full",
+          className,
+        )}
         {...props}
       >
         {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : leftIcon}
