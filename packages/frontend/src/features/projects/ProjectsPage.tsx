@@ -1,20 +1,24 @@
 /**
  * ProjectsPage Component
- * Kullanıcının projelerini listeler
+ * Modern animated projects page with theme support
  */
 
 import { useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
-import {
-  LayoutDashboard,
-  LogOut,
-  Plus,
-  FolderKanban,
-  Loader2,
-} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { LayoutDashboard, LogOut, Plus } from "lucide-react";
 import { useProjects } from "./hooks/useProjects";
 import { ProjectCard } from "./ProjectCard";
 import { CreateProjectModal } from "./CreateProjectModal";
+import {
+  Button,
+  ThemeToggle,
+  NoProjectsEmpty,
+  SkeletonCard,
+  PageTransition,
+  StaggerList,
+  StaggerItem,
+} from "@/components/ui";
 
 export default function ProjectsPage() {
   const { user, logout } = useAuth();
@@ -23,99 +27,113 @@ export default function ProjectsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 transition-colors">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="bg-white dark:bg-surface-800 shadow-sm border-b border-surface-200 dark:border-surface-700 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="flex items-center gap-3"
+            >
+              <div className="w-9 h-9 bg-gradient-to-br from-primary-500 to-primary-700 rounded-xl flex items-center justify-center shadow-lg shadow-primary-500/25">
                 <LayoutDashboard className="w-5 h-5 text-white" />
               </div>
-              <span className="font-semibold text-gray-900">TaskFlow</span>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">
-                Merhaba,{" "}
-                <span className="font-medium text-gray-900">{user?.name}</span>
+              <span className="font-semibold text-surface-900 dark:text-white text-lg">
+                TaskFlow
               </span>
-              <button
+            </motion.div>
+
+            <div className="flex items-center gap-3">
+              <ThemeToggle size="sm" />
+              <span className="text-sm text-surface-600 dark:text-surface-400 hidden sm:block">
+                Merhaba,{" "}
+                <span className="font-medium text-surface-900 dark:text-white">
+                  {user?.name}
+                </span>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={logout}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                leftIcon={<LogOut className="w-4 h-4" />}
               >
-                <LogOut className="w-4 h-4" />
-                Çıkış
-              </button>
+                <span className="hidden sm:inline">Çıkış</span>
+              </Button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Projelerim</h1>
-            <p className="text-gray-500 mt-1">Tüm projelerini buradan yönet</p>
-          </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+      <PageTransition>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Page Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8"
           >
-            <Plus className="w-4 h-4" />
-            Yeni Proje
-          </button>
-        </div>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
-            {error}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && projects.length === 0 && (
-          <div className="text-center py-20">
-            <FolderKanban className="w-16 h-16 text-gray-300 mx-auto" />
-            <h3 className="mt-4 text-lg font-medium text-gray-900">
-              Henüz proje yok
-            </h3>
-            <p className="mt-2 text-gray-500">
-              İlk projenizi oluşturarak başlayın
-            </p>
-            <button
+            <div>
+              <h1 className="text-2xl font-bold text-surface-900 dark:text-white">
+                Projelerim
+              </h1>
+              <p className="text-surface-500 dark:text-surface-400 mt-1">
+                Tüm projelerini buradan yönet
+              </p>
+            </div>
+            <Button
               onClick={() => setIsModalOpen(true)}
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              leftIcon={<Plus className="w-4 h-4" />}
             >
-              <Plus className="w-4 h-4" />
-              Proje Oluştur
-            </button>
-          </div>
-        )}
+              Yeni Proje
+            </Button>
+          </motion.div>
 
-        {/* Projects Grid */}
-        {!isLoading && !error && projects.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {projects.map((project) => (
-              <ProjectCard
-                key={project.id}
-                project={project}
-                onDelete={deleteProject}
-              />
-            ))}
-          </div>
-        )}
-      </main>
+          {/* Loading State */}
+          {isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {[...Array(8)].map((_, i) => (
+                <SkeletonCard key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* Error State */}
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-error-50 dark:bg-error-500/10 border border-error-200 dark:border-error-500/30 rounded-xl p-4 text-error-600 dark:text-error-400"
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Empty State */}
+          {!isLoading && !error && projects.length === 0 && (
+            <NoProjectsEmpty onCreateClick={() => setIsModalOpen(true)} />
+          )}
+
+          {/* Projects Grid */}
+          {!isLoading && !error && projects.length > 0 && (
+            <StaggerList className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <AnimatePresence mode="popLayout">
+                {projects.map((project) => (
+                  <StaggerItem key={project.id}>
+                    <ProjectCard project={project} onDelete={deleteProject} />
+                  </StaggerItem>
+                ))}
+              </AnimatePresence>
+            </StaggerList>
+          )}
+        </main>
+      </PageTransition>
 
       {/* Create Project Modal */}
       <CreateProjectModal

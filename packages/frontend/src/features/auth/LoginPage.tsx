@@ -1,107 +1,135 @@
-import { useState, type FormEvent } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router'
-import { LogIn } from 'lucide-react'
-import { useAuth } from '../../contexts/AuthContext'
+import { useState, type FormEvent } from "react";
+import { Link, useNavigate, useLocation } from "react-router";
+import { LogIn, Mail, Lock } from "lucide-react";
+import { motion } from "framer-motion";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button, Input, PageTransition, ThemeToggle } from "@/components/ui";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const { login, isAuthenticated } = useAuth()
-  const navigate = useNavigate()
-  const location = useLocation()
+  const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // Zaten giriş yapmışsa dashboard'a yönlendir
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard'
+  const from =
+    (location.state as { from?: { pathname: string } })?.from?.pathname ||
+    "/dashboard";
 
   if (isAuthenticated) {
-    navigate(from, { replace: true })
+    navigate(from, { replace: true });
   }
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
 
     try {
-      await login(email, password)
-      navigate(from, { replace: true })
+      await login(email, password);
+      navigate(from, { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Giriş başarısız'
-      setError(message)
+      const message = err instanceof Error ? err.message : "Giriş başarısız";
+      setError(message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-accent-50 dark:from-surface-900 dark:via-surface-900 dark:to-surface-800 flex items-center justify-center p-4 relative">
+      {/* Theme Toggle */}
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
+
+      <PageTransition className="w-full max-w-md">
         {/* Logo & Title */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4">
+        <motion.div
+          initial={{ y: -20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="text-center mb-8"
+        >
+          <motion.div
+            whileHover={{ scale: 1.05, rotate: 3 }}
+            transition={{ type: "spring", stiffness: 300 }}
+            className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl mb-4 shadow-lg shadow-primary-500/30"
+          >
             <LogIn className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900">TaskFlow</h1>
-          <p className="text-gray-500 mt-2">Hesabına giriş yap</p>
-        </div>
+          </motion.div>
+          <h1 className="text-3xl font-bold text-surface-900 dark:text-white">
+            TaskFlow
+          </h1>
+          <p className="text-surface-500 dark:text-surface-400 mt-2">
+            Hesabına giriş yap
+          </p>
+        </motion.div>
 
         {/* Form Card */}
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg p-8 space-y-6">
+        <motion.form
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          onSubmit={handleSubmit}
+          className="bg-white dark:bg-surface-800 rounded-2xl shadow-xl dark:shadow-2xl shadow-surface-200/50 p-8 space-y-6 border border-surface-100 dark:border-surface-700"
+        >
           {error && (
-            <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="bg-error-50 dark:bg-error-500/10 text-error-600 dark:text-error-400 px-4 py-3 rounded-lg text-sm border border-error-200 dark:border-error-500/20"
+            >
               {error}
-            </div>
+            </motion.div>
           )}
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              E-posta
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              placeholder="ornek@email.com"
-            />
-          </div>
+          <Input
+            label="E-posta"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            leftIcon={<Mail className="w-5 h-5" />}
+            placeholder="ornek@email.com"
+            autoComplete="email"
+          />
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Şifre
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition"
-              placeholder="••••••••"
-            />
-          </div>
+          <Input
+            label="Şifre"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            leftIcon={<Lock className="w-5 h-5" />}
+            placeholder="••••••••"
+            autoComplete="current-password"
+          />
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-medium hover:bg-indigo-700 focus:ring-4 focus:ring-indigo-200 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            isLoading={loading}
+            fullWidth
+            size="lg"
+            className="mt-2"
           >
-            {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
-          </button>
+            {loading ? "Giriş yapılıyor..." : "Giriş Yap"}
+          </Button>
 
-          <p className="text-center text-sm text-gray-500">
-            Hesabın yok mu?{' '}
-            <Link to="/register" className="text-indigo-600 font-medium hover:underline">
+          <p className="text-center text-sm text-surface-500 dark:text-surface-400">
+            Hesabın yok mu?{" "}
+            <Link
+              to="/register"
+              className="text-primary-600 dark:text-primary-400 font-medium hover:underline"
+            >
               Kayıt ol
             </Link>
           </p>
-        </form>
-      </div>
+        </motion.form>
+      </PageTransition>
     </div>
-  )
+  );
 }
