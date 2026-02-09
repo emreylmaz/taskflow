@@ -17,8 +17,38 @@ import { authenticate } from "../middleware/auth.js";
 import {
   requireOrgAccess,
   requireTeamOrgAccess,
+  requireOrgAdminOrTeamLead,
 } from "../middleware/orgAccess.js";
 import * as teamService from "../services/team.service.js";
+import { z } from "zod";
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Route Parameter Schemas (typed params)
+// ══════════════════════════════════════════════════════════════════════════════
+
+const orgIdParamSchema = z.object({
+  orgId: z.string().min(1, "Organization ID gerekli"),
+});
+
+const teamIdParamSchema = z.object({
+  orgId: z.string().min(1, "Organization ID gerekli"),
+  teamId: z.string().min(1, "Team ID gerekli"),
+});
+
+const memberIdParamSchema = z.object({
+  orgId: z.string().min(1, "Organization ID gerekli"),
+  teamId: z.string().min(1, "Team ID gerekli"),
+  memberId: z.string().min(1, "Member ID gerekli"),
+});
+
+const standaloneTeamIdParamSchema = z.object({
+  id: z.string().min(1, "Team ID gerekli"),
+});
+
+// Helper to parse and validate route params
+function parseParams<T>(schema: z.ZodSchema<T>, params: unknown): T {
+  return schema.parse(params);
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 // Organization-scoped Team Routes (/api/v1/organizations/:orgId/teams)
@@ -38,9 +68,8 @@ orgTeamRouter.get(
   requireOrgAccess("VIEWER", "orgId"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const teams = await teamService.getOrganizationTeams(
-        req.params.orgId as string,
-      );
+      const { orgId } = parseParams(orgIdParamSchema, req.params);
+      const teams = await teamService.getOrganizationTeams(orgId);
       res.json(teams);
     } catch (error) {
       next(error);
@@ -58,11 +87,8 @@ orgTeamRouter.post(
   validate(createTeamSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const team = await teamService.createTeam(
-        req.params.orgId as string,
-        req.body,
-        req.userId!,
-      );
+      const { orgId } = parseParams(orgIdParamSchema, req.params);
+      const team = await teamService.createTeam(orgId, req.body, req.userId!);
       res.status(201).json(team);
     } catch (error) {
       next(error);
@@ -79,10 +105,11 @@ orgTeamRouter.get(
   requireOrgAccess("VIEWER", "orgId"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const team = await teamService.getTeamById(req.params.teamId as string);
+      const { orgId, teamId } = parseParams(teamIdParamSchema, req.params);
+      const team = await teamService.getTeamById(teamId);
 
       // Takımın bu organizasyona ait olduğunu doğrula
-      if (team.organizationId !== req.params.orgId) {
+      if (team.organizationId !== orgId) {
         return res.status(404).json({ message: "Takım bulunamadı" });
       }
 
@@ -100,29 +127,12 @@ orgTeamRouter.get(
 orgTeamRouter.put(
   "/:teamId",
   requireOrgAccess("MEMBER", "orgId"),
+  requireOrgAdminOrTeamLead(),
   validate(updateTeamSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Admin değilse, team lead olmalı
-      if (req.orgRole !== "OWNER" && req.orgRole !== "ADMIN") {
-        const teamMembers = await teamService.getTeamMembers(
-          req.params.teamId as string,
-        );
-        const userMembership = teamMembers.find(
-          (m) => m.user.id === req.userId,
-        );
-
-        if (!userMembership || userMembership.role !== "LEAD") {
-          return res
-            .status(403)
-            .json({ message: "Bu işlem için yetkiniz yok" });
-        }
-      }
-
-      const team = await teamService.updateTeam(
-        req.params.teamId as string,
-        req.body,
-      );
+      const { teamId } = parseParams(teamIdParamSchema, req.params);
+      const team = await teamService.updateTeam(teamId, req.body);
       res.json(team);
     } catch (error) {
       next(error);
@@ -139,7 +149,8 @@ orgTeamRouter.delete(
   requireOrgAccess("ADMIN", "orgId"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await teamService.deleteTeam(req.params.teamId as string);
+      const { teamId } = parseParams(teamIdParamSchema, req.params);
+      await teamService.deleteTeam(teamId);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -160,9 +171,8 @@ orgTeamRouter.get(
   requireOrgAccess("VIEWER", "orgId"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const members = await teamService.getTeamMembers(
-        req.params.teamId as string,
-      );
+      const { teamId } = parseParams(teamIdParamSchema, req.params);
+      const members = await teamService.getTeamMembers(teamId);
       res.json(members);
     } catch (error) {
       next(error);
@@ -177,27 +187,13 @@ orgTeamRouter.get(
 orgTeamRouter.post(
   "/:teamId/members",
   requireOrgAccess("MEMBER", "orgId"),
+  requireOrgAdminOrTeamLead(),
   validate(addTeamMemberSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Admin değilse, team lead olmalı
-      if (req.orgRole !== "OWNER" && req.orgRole !== "ADMIN") {
-        const teamMembers = await teamService.getTeamMembers(
-          req.params.teamId as string,
-        );
-        const userMembership = teamMembers.find(
-          (m) => m.user.id === req.userId,
-        );
-
-        if (!userMembership || userMembership.role !== "LEAD") {
-          return res
-            .status(403)
-            .json({ message: "Bu işlem için yetkiniz yok" });
-        }
-      }
-
+      const { teamId } = parseParams(teamIdParamSchema, req.params);
       const member = await teamService.addTeamMember(
-        req.params.teamId as string,
+        teamId,
         req.body.userId,
         req.body.role,
       );
@@ -215,29 +211,12 @@ orgTeamRouter.post(
 orgTeamRouter.put(
   "/:teamId/members/:memberId",
   requireOrgAccess("MEMBER", "orgId"),
+  requireOrgAdminOrTeamLead(),
   validate(updateTeamMemberSchema),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Admin değilse, team lead olmalı
-      if (req.orgRole !== "OWNER" && req.orgRole !== "ADMIN") {
-        const teamMembers = await teamService.getTeamMembers(
-          req.params.teamId as string,
-        );
-        const userMembership = teamMembers.find(
-          (m) => m.user.id === req.userId,
-        );
-
-        if (!userMembership || userMembership.role !== "LEAD") {
-          return res
-            .status(403)
-            .json({ message: "Bu işlem için yetkiniz yok" });
-        }
-      }
-
-      await teamService.updateTeamMemberRole(
-        req.params.memberId as string,
-        req.body.role,
-      );
+      const { memberId } = parseParams(memberIdParamSchema, req.params);
+      await teamService.updateTeamMemberRole(memberId, req.body.role);
       res.json({ message: "Üye rolü güncellendi" });
     } catch (error) {
       next(error);
@@ -252,25 +231,11 @@ orgTeamRouter.put(
 orgTeamRouter.delete(
   "/:teamId/members/:memberId",
   requireOrgAccess("MEMBER", "orgId"),
+  requireOrgAdminOrTeamLead(),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Admin değilse, team lead olmalı
-      if (req.orgRole !== "OWNER" && req.orgRole !== "ADMIN") {
-        const teamMembers = await teamService.getTeamMembers(
-          req.params.teamId as string,
-        );
-        const userMembership = teamMembers.find(
-          (m) => m.user.id === req.userId,
-        );
-
-        if (!userMembership || userMembership.role !== "LEAD") {
-          return res
-            .status(403)
-            .json({ message: "Bu işlem için yetkiniz yok" });
-        }
-      }
-
-      await teamService.removeTeamMember(req.params.memberId as string);
+      const { memberId } = parseParams(memberIdParamSchema, req.params);
+      await teamService.removeTeamMember(memberId);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -311,7 +276,8 @@ standaloneTeamRouter.get(
   requireTeamOrgAccess("VIEWER"),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const team = await teamService.getTeamById(req.params.id as string);
+      const { id } = parseParams(standaloneTeamIdParamSchema, req.params);
+      const team = await teamService.getTeamById(id);
       res.json(team);
     } catch (error) {
       next(error);

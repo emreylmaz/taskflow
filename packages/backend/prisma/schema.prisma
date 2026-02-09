@@ -62,6 +62,7 @@ model OrganizationMember {
 
   @@unique([userId, organizationId])
   @@index([organizationId])
+  @@index([userId])
 }
 
 enum OrgRole {
@@ -99,6 +100,7 @@ model TeamMember {
 
   @@unique([userId, teamId])
   @@index([teamId])
+  @@index([userId])
 }
 
 enum TeamRole {

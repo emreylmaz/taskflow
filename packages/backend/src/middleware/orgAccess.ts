@@ -183,3 +183,51 @@ export function requireTeamMembership(minRole?: "LEAD" | "MEMBER") {
     }
   };
 }
+
+/**
+ * Org Admin veya Team Lead kontrolü
+ * Bu middleware requireOrgAccess ile birlikte çalışır.
+ * Org OWNER/ADMIN ise geçer, değilse team lead olmalı.
+ */
+export function requireOrgAdminOrTeamLead() {
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    try {
+      const userId = req.userId;
+      if (!userId) {
+        throw ApiError.unauthorized("Kullanıcı kimliği bulunamadı");
+      }
+
+      // orgRole zaten requireOrgAccess tarafından set edilmiş olmalı
+      if (!req.orgRole) {
+        throw ApiError.internalError(
+          "Middleware sırası hatalı: requireOrgAccess önce çalışmalı",
+        );
+      }
+
+      // Org admin/owner ise direkt geç
+      if (req.orgRole === "OWNER" || req.orgRole === "ADMIN") {
+        return next();
+      }
+
+      // Değilse team lead kontrolü yap
+      const teamId = req.params.teamId as string | undefined;
+      if (!teamId) {
+        throw ApiError.badRequest("Team ID'si gerekli");
+      }
+
+      const teamMembership = await prisma.teamMember.findUnique({
+        where: {
+          userId_teamId: { userId, teamId },
+        },
+      });
+
+      if (!teamMembership || teamMembership.role !== "LEAD") {
+        throw ApiError.forbidden("Bu işlem için yetkiniz yok");
+      }
+
+      next();
+    } catch (error) {
+      next(error);
+    }
+  };
+}
